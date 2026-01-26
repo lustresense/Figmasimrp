@@ -8,6 +8,14 @@ import { Input } from '@/app/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Badge } from '@/app/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/app/components/ui/dialog';
 import { 
   Crown, 
   Users, 
@@ -48,6 +56,9 @@ export function AdminGodMode({ adminUser, authToken }: AdminGodModeProps) {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [temporaryAdjustments, setTemporaryAdjustments] = useState<TemporaryAdjustment[]>([]);
+  const [showModeratorLevelDialog, setShowModeratorLevelDialog] = useState(false);
+  const [selectedUserForModerator, setSelectedUserForModerator] = useState<any>(null);
+  const [selectedModeratorLevel, setSelectedModeratorLevel] = useState<number>(1);
   
   // Form states
   const [pointsToAdd, setPointsToAdd] = useState('');
@@ -105,9 +116,24 @@ export function AdminGodMode({ adminUser, authToken }: AdminGodModeProps) {
   };
 
   const handleAssignModeratorRole = async (userId: string) => {
-    if (!confirm('Assign Moderator role? This gives the user verification powers.')) return;
+    const userToAssign = users.find(u => u.id === userId);
+    if (!userToAssign) return;
+    
+    // Show level selection dialog
+    setSelectedUserForModerator(userToAssign);
+    setSelectedModeratorLevel(1); // Default to level 1
+    setShowModeratorLevelDialog(true);
+  };
+
+  const confirmAssignModeratorRole = async () => {
+    if (!selectedUserForModerator) return;
     
     try {
+      // Calculate points needed for the selected moderator level
+      const moderatorLevels = getAllLevelsByRole('moderator');
+      const targetLevel = moderatorLevels[selectedModeratorLevel - 1];
+      const pointsForLevel = targetLevel.minPoints;
+      
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/admin/assign-role`,
         {
@@ -117,16 +143,20 @@ export function AdminGodMode({ adminUser, authToken }: AdminGodModeProps) {
             'Authorization': `Bearer ${authToken || publicAnonKey}`
           },
           body: JSON.stringify({
-            userId,
+            userId: selectedUserForModerator.id,
             role: 'moderator',
-            reason: 'Assigned by admin'
+            level: selectedModeratorLevel,
+            points: pointsForLevel,
+            reason: `Assigned as Moderator Level ${selectedModeratorLevel} by admin`
           })
         }
       );
       
       if (response.ok) {
-        toast.success('Moderator role assigned!');
+        toast.success(`Moderator role assigned! Level ${selectedModeratorLevel}: ${targetLevel.name}`);
         fetchUsers();
+        setShowModeratorLevelDialog(false);
+        setSelectedUserForModerator(null);
       } else {
         toast.error('Failed to assign role');
       }
@@ -247,6 +277,49 @@ export function AdminGodMode({ adminUser, authToken }: AdminGodModeProps) {
     } catch (error) {
       console.error('Error adding badge:', error);
       toast.error('Error adding badge');
+    }
+  };
+
+  const handleSetTemporaryLevel = async () => {
+    if (!selectedUser || !selectedLevel || !reason) {
+      toast.error('Please select level and provide reason');
+      return;
+    }
+    
+    const levelNum = parseInt(selectedLevel);
+    const targetLevel = getAllLevelsByRole(selectedUser.role)[levelNum - 1];
+    
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/admin/set-temporary-level`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken || publicAnonKey}`
+          },
+          body: JSON.stringify({
+            userId: selectedUser.id,
+            level: levelNum,
+            role: selectedUser.role,
+            reason
+          })
+        }
+      );
+      
+      if (response.ok) {
+        toast.success(`Level set to ${targetLevel.name} (expires in 24h)`);
+        setSelectedLevel('');
+        setReason('');
+        fetchUsers();
+        fetchTemporaryAdjustments();
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Failed to set level');
+      }
+    } catch (error) {
+      console.error('Error setting level:', error);
+      toast.error('Error setting level');
     }
   };
 
@@ -449,6 +522,59 @@ export function AdminGodMode({ adminUser, authToken }: AdminGodModeProps) {
                         </Button>
                       </CardContent>
                     </Card>
+
+                    {/* Set Temporary Level */}
+                    <Card className="border-2 border-orange-200">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Zap className="w-4 h-4" />
+                          Set Temporary Level
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Select Level for {selectedUser.role === 'moderator' ? 'Moderator' : selectedUser.role === 'admin' ? 'Admin' : 'User'}
+                          </label>
+                          <Select 
+                            value={selectedLevel} 
+                            onValueChange={setSelectedLevel}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose level..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {getAllLevelsByRole(selectedUser.role).map((level) => (
+                                <SelectItem key={level.level} value={level.level.toString()}>
+                                  <div className="flex items-center gap-2">
+                                    <span>{level.badge}</span>
+                                    <span>Level {level.level}: {level.name}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Input
+                          placeholder="Reason (required)"
+                          value={reason}
+                          onChange={(e) => setReason(e.target.value)}
+                        />
+                        <Button
+                          onClick={handleSetTemporaryLevel}
+                          className="w-full bg-orange-600 hover:bg-orange-700"
+                          disabled={!selectedLevel}
+                        >
+                          <Zap className="w-4 h-4 mr-2" />
+                          Set Level (Expires in 24h)
+                        </Button>
+                        {selectedLevel && (
+                          <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                            ℹ️ User akan di-set ke level ini temporarily. Setelah 24 jam, level akan kembali berdasarkan points asli.
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
                   </>
                 )}
               </div>
@@ -500,6 +626,79 @@ export function AdminGodMode({ adminUser, authToken }: AdminGodModeProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Moderator Level Selection Dialog */}
+      <Dialog open={showModeratorLevelDialog} onOpenChange={setShowModeratorLevelDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-blue-600" />
+              Assign Moderator Role
+            </DialogTitle>
+            <DialogDescription>
+              Select the moderator level for {selectedUserForModerator?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Moderator Level</label>
+              <Select 
+                value={selectedModeratorLevel.toString()} 
+                onValueChange={(value) => setSelectedModeratorLevel(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAllLevelsByRole('moderator').map((level) => (
+                    <SelectItem key={level.level} value={level.level.toString()}>
+                      <div className="flex items-center gap-2">
+                        <span>{level.badge}</span>
+                        <div>
+                          <div className="font-semibold">Level {level.level}: {level.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {level.perks[0]} • {level.minPoints}+ points
+                          </div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Level Details */}
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="p-4">
+                <div className="text-sm space-y-2">
+                  <div className="font-semibold text-blue-900">
+                    {getAllLevelsByRole('moderator')[selectedModeratorLevel - 1]?.badge} {getAllLevelsByRole('moderator')[selectedModeratorLevel - 1]?.name}
+                  </div>
+                  <div className="text-blue-800">
+                    <strong>Perks:</strong>
+                    <ul className="list-disc list-inside mt-1 space-y-1">
+                      {getAllLevelsByRole('moderator')[selectedModeratorLevel - 1]?.perks.map((perk, idx) => (
+                        <li key={idx}>{perk}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowModeratorLevelDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmAssignModeratorRole} className="bg-blue-600 hover:bg-blue-700">
+              <UserCheck className="w-4 h-4 mr-2" />
+              Assign Moderator
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
