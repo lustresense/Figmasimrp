@@ -24,10 +24,6 @@ export function LoginPage({ onNavigate, onLogin }: LoginPageProps) {
   const [nik, setNik] = useState('');
   const [nikPassword, setNikPassword] = useState('');
   
-  // Admin login state
-  const [adminUsername, setAdminUsername] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -67,46 +63,6 @@ export function LoginPage({ onNavigate, onLogin }: LoginPageProps) {
     } catch (err: any) {
       console.error('User login error:', err);
       setError(err.message || 'Terjadi kesalahan saat login');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/auth/admin-login`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}`
-          },
-          body: JSON.stringify({
-            username: adminUsername,
-            password: adminPassword
-          })
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login admin gagal');
-      }
-
-      if (data.success && data.token) {
-        onLogin(data.user, data.token);
-      } else {
-        setError('Login admin gagal. Periksa username dan password.');
-      }
-    } catch (err: any) {
-      console.error('Admin login error:', err);
-      setError(err.message || 'Terjadi kesalahan saat login admin');
     } finally {
       setLoading(false);
     }
@@ -196,10 +152,9 @@ export function LoginPage({ onNavigate, onLogin }: LoginPageProps) {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="user">Email</TabsTrigger>
                 <TabsTrigger value="nik">NIK</TabsTrigger>
-                <TabsTrigger value="admin">Admin</TabsTrigger>
               </TabsList>
 
               {/* User/Relawan Login */}
@@ -344,65 +299,6 @@ export function LoginPage({ onNavigate, onLogin }: LoginPageProps) {
                       Daftar Sekarang
                     </button>
                   </div>
-                </form>
-              </TabsContent>
-
-              {/* Admin Login */}
-              <TabsContent value="admin">
-                <form onSubmit={handleAdminLogin} className="space-y-4">
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
-
-                  <Alert>
-                    <AlertDescription>
-                      <strong>Akses Admin:</strong> Username: <code>admin</code>, Password: <code>admin</code>
-                    </AlertDescription>
-                  </Alert>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="admin-username">Username</Label>
-                    <Input
-                      id="admin-username"
-                      type="text"
-                      placeholder="admin"
-                      value={adminUsername}
-                      onChange={(e) => setAdminUsername(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="admin-password">Password</Label>
-                    <Input
-                      id="admin-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={adminPassword}
-                      onChange={(e) => setAdminPassword(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-[#FDB913] text-black hover:bg-[#E5A711]"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Memuat...
-                      </>
-                    ) : (
-                      'Masuk sebagai Admin'
-                    )}
-                  </Button>
                 </form>
               </TabsContent>
             </Tabs>
