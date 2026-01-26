@@ -44,11 +44,11 @@ export function POVSwitcher({ currentRole, currentView, onViewChange }: POVSwitc
   const CurrentIcon = currentViewData?.icon || Eye;
 
   return (
-    <div className="relative">
+    <div className="fixed top-4 right-4 z-[60]">
       {/* POV Switcher Button */}
       <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="bg-black/10 hover:bg-black/20 text-black border-2 border-black/20"
+        className="bg-white hover:bg-gray-50 text-black border-2 border-black/20 shadow-lg"
         size="sm"
       >
         <Eye className="w-4 h-4 mr-2" />

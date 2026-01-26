@@ -6,6 +6,7 @@ import { RegisterPage } from '@/app/components/RegisterPage';
 import { UserDashboard } from '@/app/components/UserDashboard';
 import { AdminDashboard } from '@/app/components/AdminDashboard';
 import { ModeratorDashboard } from '@/app/components/ModeratorDashboard';
+import { POVSwitcher } from '@/app/components/POVSwitcher';
 import { Toaster } from 'sonner';
 import { useSeedData } from '@/app/components/SeedData';
 
@@ -128,6 +129,15 @@ export default function App() {
   return (
     <div className="size-full">
       <Toaster position="top-center" richColors />
+      
+      {/* Fixed POV Switcher - Always visible when logged in */}
+      {currentPage === 'dashboard' && currentUser && (
+        <POVSwitcher
+          currentRole={currentUser.role}
+          currentView={currentView}
+          onViewChange={handleViewChange}
+        />
+      )}
       
       {currentPage === 'landing' && (
         <LandingPage onNavigate={navigateTo} />

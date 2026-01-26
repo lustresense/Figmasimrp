@@ -192,11 +192,6 @@ export function AdminDashboard({ user, authToken, onLogout, onNavigate, currentV
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <POVSwitcher
-              currentRole={user.role}
-              currentView={currentView}
-              onViewChange={onViewChange}
-            />
             <Button
               variant="outline"
               size="sm"
