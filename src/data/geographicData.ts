@@ -392,6 +392,37 @@ export const findByKodepos = (kodepos: string) => {
   return null;
 };
 
+// Find ALL kelurahan for a postal code (some postal codes have multiple kelurahan)
+export const findAllByKodepos = (kodepos: string): Array<{
+  kecamatan: Kecamatan;
+  kelurahan: Kelurahan;
+}> => {
+  // Validasi format kode pos
+  if (!kodepos || kodepos.length !== 5 || !/^\d{5}$/.test(kodepos)) {
+    return [];
+  }
+
+  // Harus dimulai dengan 60 (Surabaya)
+  if (!kodepos.startsWith('60')) {
+    return [];
+  }
+
+  const results: Array<{ kecamatan: Kecamatan; kelurahan: Kelurahan }> = [];
+  
+  for (const kec of geographicData.kecamatan) {
+    for (const kel of kec.kelurahan) {
+      if (kel.kodepos.includes(kodepos)) {
+        results.push({
+          kecamatan: kec,
+          kelurahan: kel
+        });
+      }
+    }
+  }
+  
+  return results;
+};
+
 export const getAllKecamatan = () => {
   return geographicData.kecamatan.map(kec => ({
     kode: kec.kode,

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { LandingPage } from '@/app/components/LandingPage';
 import { LoginPage } from '@/app/components/LoginPage';
+import { AdminLoginPage } from '@/app/components/AdminLoginPage';
 import { RegisterPage } from '@/app/components/RegisterPage';
 import { UserDashboard } from '@/app/components/UserDashboard';
 import { AdminDashboard } from '@/app/components/AdminDashboard';
@@ -10,7 +11,7 @@ import { POVSwitcher } from '@/app/components/POVSwitcher';
 import { Toaster } from 'sonner';
 import { useSeedData } from '@/app/components/SeedData';
 
-type Page = 'landing' | 'login' | 'register' | 'dashboard';
+type Page = 'landing' | 'login' | 'adminlogin' | 'register' | 'dashboard';
 
 interface User {
   id?: string;
@@ -39,6 +40,42 @@ export default function App() {
 
   // Seed database with sample data
   useSeedData();
+
+  // Check for admin route on mount and URL changes
+  useEffect(() => {
+    const checkRoute = () => {
+      const hash = window.location.hash;
+      const pathname = window.location.pathname;
+      
+      // Check if accessing admin route
+      if (pathname === '/admin' || hash === '#/admin') {
+        const token = localStorage.getItem('simrp_auth_token');
+        const userStr = localStorage.getItem('simrp_user');
+        
+        if (token && userStr) {
+          const user = JSON.parse(userStr);
+          // If already logged in as admin, go to dashboard
+          if (user.role === 'admin') {
+            setCurrentUser(user);
+            setAuthToken(token);
+            setCurrentPage('dashboard');
+            setCurrentView('admin');
+          } else {
+            // Not admin, show admin login
+            setCurrentPage('adminlogin');
+          }
+        } else {
+          // Not logged in, show admin login
+          setCurrentPage('adminlogin');
+        }
+        return;
+      }
+    };
+    
+    checkRoute();
+    window.addEventListener('hashchange', checkRoute);
+    return () => window.removeEventListener('hashchange', checkRoute);
+  }, []);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -130,8 +167,8 @@ export default function App() {
     <div className="size-full">
       <Toaster position="top-center" richColors />
       
-      {/* Fixed POV Switcher - Always visible when logged in */}
-      {currentPage === 'dashboard' && currentUser && (
+      {/* Fixed POV Switcher - Only visible for admins */}
+      {currentPage === 'dashboard' && currentUser && currentUser.role === 'admin' && (
         <POVSwitcher
           currentRole={currentUser.role}
           currentView={currentView}
@@ -145,6 +182,13 @@ export default function App() {
       
       {currentPage === 'login' && (
         <LoginPage 
+          onNavigate={navigateTo} 
+          onLogin={handleLogin}
+        />
+      )}
+      
+      {currentPage === 'adminlogin' && (
+        <AdminLoginPage 
           onNavigate={navigateTo} 
           onLogin={handleLogin}
         />

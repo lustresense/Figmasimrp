@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/app/components/ui/alert';
 import { ArrowLeft, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
-import { findByKodepos } from '@/data/geographicData';
+import { findAllByKodepos, type Kecamatan, type Kelurahan } from '@/data/geographicData';
 
 interface RegisterPageProps {
   onNavigate: (page: 'landing' | 'login') => void;
@@ -28,6 +28,10 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
   });
 
   const [kodeposValid, setKodeposValid] = useState<boolean | null>(null);
+  const [kelurahanOptions, setKelurahanOptions] = useState<Array<{
+    kecamatan: Kecamatan;
+    kelurahan: Kelurahan;
+  }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -35,16 +39,39 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
   // Auto-fill kecamatan dan kelurahan based on kodepos
   useEffect(() => {
     if (formData.kodepos.length === 5) {
-      const result = findByKodepos(formData.kodepos);
+      const results = findAllByKodepos(formData.kodepos);
       
-      if (result) {
-        setFormData(prev => ({
-          ...prev,
-          kecamatan: result.kecamatan.nama,
-          kelurahan: result.kelurahan.nama
-        }));
+      if (results.length > 0) {
+        setKelurahanOptions(results);
+        
+        // If only one option, auto-fill
+        if (results.length === 1) {
+          setFormData(prev => ({
+            ...prev,
+            kecamatan: results[0].kecamatan.nama,
+            kelurahan: results[0].kelurahan.nama
+          }));
+        } else {
+          // Multiple options, user needs to select
+          // Keep kecamatan if all results have same kecamatan
+          const uniqueKecamatan = [...new Set(results.map(r => r.kecamatan.nama))];
+          if (uniqueKecamatan.length === 1) {
+            setFormData(prev => ({
+              ...prev,
+              kecamatan: uniqueKecamatan[0],
+              kelurahan: '' // User needs to select
+            }));
+          } else {
+            setFormData(prev => ({
+              ...prev,
+              kecamatan: '',
+              kelurahan: ''
+            }));
+          }
+        }
         setKodeposValid(true);
       } else {
+        setKelurahanOptions([]);
         setFormData(prev => ({
           ...prev,
           kecamatan: '',
@@ -54,6 +81,7 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
       }
     } else {
       setKodeposValid(null);
+      setKelurahanOptions([]);
       setFormData(prev => ({
         ...prev,
         kecamatan: '',
@@ -362,19 +390,52 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
                     <Label htmlFor="kelurahan">
                       Kelurahan <span className="text-red-500">*</span>
                     </Label>
-                    <Input
-                      id="kelurahan"
-                      placeholder="Otomatis terisi"
-                      value={formData.kelurahan}
-                      disabled
-                      className="bg-gray-100"
-                    />
+                    {kelurahanOptions.length > 1 ? (
+                      <Select
+                        value={formData.kelurahan}
+                        onValueChange={(value) => {
+                          const selected = kelurahanOptions.find(
+                            opt => opt.kelurahan.nama === value
+                          );
+                          if (selected) {
+                            setFormData(prev => ({
+                              ...prev,
+                              kelurahan: value,
+                              kecamatan: selected.kecamatan.nama
+                            }));
+                          }
+                        }}
+                        disabled={loading}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih kelurahan..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {kelurahanOptions.map((opt, idx) => (
+                            <SelectItem key={idx} value={opt.kelurahan.nama}>
+                              {opt.kelurahan.nama} ({opt.kecamatan.nama})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        id="kelurahan"
+                        placeholder="Otomatis terisi"
+                        value={formData.kelurahan}
+                        disabled
+                        className="bg-gray-100"
+                      />
+                    )}
                   </div>
                 </div>
 
                 <Alert className="mt-4">
                   <AlertDescription className="text-xs">
                     💡 <strong>Tips:</strong> Masukkan kode pos wilayah Anda, dan sistem akan otomatis mengisi Kecamatan dan Kelurahan.
+                    {kelurahanOptions.length > 1 && (
+                      <> Kode pos ini memiliki beberapa kelurahan, silakan pilih yang sesuai.</>
+                    )}
                   </AlertDescription>
                 </Alert>
               </div>

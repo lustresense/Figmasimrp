@@ -44,7 +44,7 @@ export function POVSwitcher({ currentRole, currentView, onViewChange }: POVSwitc
   const CurrentIcon = currentViewData?.icon || Eye;
 
   return (
-    <div className="fixed top-4 right-4 z-[60]">
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60]">
       {/* POV Switcher Button */}
       <Button
         onClick={() => setIsOpen(!isOpen)}
@@ -66,7 +66,7 @@ export function POVSwitcher({ currentRole, currentView, onViewChange }: POVSwitc
           />
           
           {/* Dropdown Content */}
-          <Card className="absolute top-full right-0 mt-2 w-80 shadow-2xl z-50 border-2">
+          <Card className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-80 shadow-2xl z-50 border-2">
             <CardContent className="p-3">
               <div className="space-y-2">
                 {views.map((view) => {

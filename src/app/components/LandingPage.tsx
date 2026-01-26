@@ -41,28 +41,30 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
   return (
     <div className="size-full overflow-auto bg-gradient-to-b from-[#0B6E4F] to-[#064835]">
       {/* Header */}
-      <header className="bg-white shadow-md">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-[#0B6E4F] rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-xl">SR</span>
+      <header className="bg-white shadow-md sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-[#0B6E4F] rounded-full flex items-center justify-center">
+              <span className="text-white font-bold text-lg md:text-xl">SR</span>
             </div>
             <div>
-              <h1 className="font-bold text-xl text-[#0B6E4F]">SIM RELAWAN</h1>
-              <p className="text-xs text-gray-600">Kampung Pancasila</p>
+              <h1 className="font-bold text-base md:text-xl text-[#0B6E4F]">SIM RELAWAN</h1>
+              <p className="text-xs text-gray-600 hidden sm:block">Kampung Pancasila</p>
             </div>
           </div>
           <div className="flex gap-2">
             <Button 
               variant="outline" 
               onClick={() => onNavigate('login')}
-              className="border-[#0B6E4F] text-[#0B6E4F] hover:bg-[#0B6E4F] hover:text-white"
+              className="border-[#0B6E4F] text-[#0B6E4F] hover:bg-[#0B6E4F] hover:text-white text-sm md:text-base px-3 md:px-4"
+              size="sm"
             >
               Masuk
             </Button>
             <Button 
               onClick={() => onNavigate('register')}
-              className="bg-[#FDB913] text-black hover:bg-[#E5A711]"
+              className="bg-[#FDB913] text-black hover:bg-[#E5A711] text-sm md:text-base px-3 md:px-4"
+              size="sm"
             >
               Daftar
             </Button>
@@ -73,12 +75,12 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-16 text-center text-white">
         <h2 className="text-4xl md:text-5xl font-bold mb-4">
-          Bergabunglah Bersama<br />Relawan Kampung Pancasila
+          Bersama Membangun<br />Kampung Pancasila yang Lebih Baik
         </h2>
-        <p className="text-xl mb-8 text-green-100">
-          Platform digital untuk warga aktif membangun kampung lebih baik
+        <p className="text-xl mb-8 text-green-100 max-w-3xl mx-auto">
+          Platform digital yang menghubungkan warga aktif untuk berkontribusi dalam program pembangunan kampung melalui gotong royong, lingkungan, ekonomi kreatif, dan keamanan.
         </p>
-        <div className="flex gap-4 justify-center">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button 
             size="lg"
             onClick={() => onNavigate('register')}
@@ -88,8 +90,14 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
           </Button>
           <Button 
             size="lg"
-            variant="outline"
-            className="border-white text-white hover:bg-white hover:text-[#0B6E4F] text-lg px-8"
+            className="bg-white text-[#0B6E4F] hover:bg-gray-100 border-2 border-white text-lg px-8"
+            onClick={() => {
+              // Scroll to features or events section
+              const featuresSection = document.querySelector('#features-section');
+              if (featuresSection) {
+                featuresSection.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
           >
             Lihat Event
           </Button>
@@ -101,17 +109,17 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
         <h3 className="text-3xl font-bold text-center text-white mb-12">
           4 Pilar Kampung Pancasila
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
           {pillars.map((pillar) => {
             const IconComponent = pillar.icon;
             return (
-              <Card key={pillar.id} className="hover:shadow-xl transition-shadow border-2" style={{ borderColor: pillar.color }}>
-                <CardHeader>
+              <Card key={pillar.id} className="hover:shadow-xl transition-shadow border-2 flex flex-col" style={{ borderColor: pillar.color }}>
+                <CardHeader className="flex-1">
                   <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 mx-auto" style={{ backgroundColor: pillar.color }}>
                     <IconComponent className="w-8 h-8 text-white" />
                   </div>
-                  <CardTitle className="text-center">{pillar.name}</CardTitle>
-                  <CardDescription className="text-center">
+                  <CardTitle className="text-center text-lg">{pillar.name}</CardTitle>
+                  <CardDescription className="text-center text-sm">
                     {pillar.description}
                   </CardDescription>
                 </CardHeader>
@@ -122,7 +130,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </section>
 
       {/* Features Section */}
-      <section className="bg-white py-16">
+      <section id="features-section" className="bg-white py-16">
         <div className="container mx-auto px-4">
           <h3 className="text-3xl font-bold text-center text-[#0B6E4F] mb-12">
             Fitur Unggulan
