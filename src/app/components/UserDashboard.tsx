@@ -26,6 +26,7 @@ export function UserDashboard({ user, authToken, onLogout, onNavigate, currentVi
   const [activePage, setActivePage] = useState<'home' | 'events' | 'report' | 'profile'>('home');
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   // Calculate user level
   const userLevel = getLevelByRole('user', user?.points || 0);
@@ -33,6 +34,17 @@ export function UserDashboard({ user, authToken, onLogout, onNavigate, currentVi
 
   useEffect(() => {
     fetchEvents();
+  }, []);
+
+  // Handle scroll for navigation opacity
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      setScrolled(scrollPosition > 10);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const fetchEvents = async () => {
@@ -67,8 +79,67 @@ export function UserDashboard({ user, authToken, onLogout, onNavigate, currentVi
 
   return (
     <div className="size-full flex flex-col bg-gray-50">
-      {/* Top Header */}
-      <header className="bg-[#0B6E4F] text-white px-4 py-3 shadow-lg">
+      {/* Top Navigation - Floating with scroll-based opacity */}
+      <nav 
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled 
+            ? 'bg-white shadow-lg' 
+            : 'bg-white/60 backdrop-blur-sm shadow-md'
+        }`}
+      >
+        <div className="flex items-center justify-around h-14 px-2">
+          <button
+            onClick={() => setActivePage('home')}
+            className={`flex flex-col items-center justify-center px-4 py-1.5 rounded-full transition-all ${
+              activePage === 'home' 
+                ? 'bg-[#FDB913] text-black shadow-md' 
+                : 'text-gray-600 hover:text-[#0B6E4F] hover:bg-gray-100'
+            }`}
+          >
+            <Home className="w-5 h-5" />
+            <span className="text-xs font-semibold mt-0.5">Home</span>
+          </button>
+          
+          <button
+            onClick={() => setActivePage('events')}
+            className={`flex flex-col items-center justify-center px-4 py-1.5 rounded-full transition-all ${
+              activePage === 'events' 
+                ? 'bg-[#FDB913] text-black shadow-md' 
+                : 'text-gray-600 hover:text-[#0B6E4F] hover:bg-gray-100'
+            }`}
+          >
+            <Calendar className="w-5 h-5" />
+            <span className="text-xs font-semibold mt-0.5">Event</span>
+          </button>
+          
+          <button
+            onClick={() => setActivePage('profile')}
+            className={`flex flex-col items-center justify-center px-4 py-1.5 rounded-full transition-all ${
+              activePage === 'profile' 
+                ? 'bg-[#FDB913] text-black shadow-md' 
+                : 'text-gray-600 hover:text-[#0B6E4F] hover:bg-gray-100'
+            }`}
+          >
+            <User className="w-5 h-5" />
+            <span className="text-xs font-semibold mt-0.5">Profile</span>
+          </button>
+          
+          <button
+            onClick={() => setActivePage('more')}
+            className={`flex flex-col items-center justify-center px-4 py-1.5 rounded-full transition-all ${
+              activePage === 'more' 
+                ? 'bg-[#FDB913] text-black shadow-md' 
+                : 'text-gray-600 hover:text-[#0B6E4F] hover:bg-gray-100'
+            }`}
+          >
+            <Menu className="w-5 h-5" />
+            <span className="text-xs font-semibold mt-0.5">More</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Top Header - Below Navigation */}
+      <header className="bg-[#0B6E4F] text-white px-4 py-3 shadow-lg mt-14">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
@@ -89,7 +160,7 @@ export function UserDashboard({ user, authToken, onLogout, onNavigate, currentVi
       </header>
 
       {/* Content Area */}
-      <div className="flex-1 overflow-auto pb-20">
+      <div className="flex-1 overflow-auto">
         {/* Home Tab */}
         {activePage === 'home' && (
           <div className="p-4 space-y-4">
@@ -246,59 +317,6 @@ export function UserDashboard({ user, authToken, onLogout, onNavigate, currentVi
           </div>
         )}
       </div>
-
-      {/* Bottom Navigation - CRITICAL: Active state with yellow background */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
-        <div className="flex items-center justify-around h-16">
-          <button
-            onClick={() => setActivePage('home')}
-            className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
-              activePage === 'home' 
-                ? 'bg-[#FDB913] text-black' 
-                : 'text-gray-600 hover:text-[#0B6E4F]'
-            }`}
-          >
-            <Home className="w-6 h-6" />
-            <span className="text-xs font-semibold mt-1">Home</span>
-          </button>
-          
-          <button
-            onClick={() => setActivePage('events')}
-            className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
-              activePage === 'events' 
-                ? 'bg-[#FDB913] text-black' 
-                : 'text-gray-600 hover:text-[#0B6E4F]'
-            }`}
-          >
-            <Calendar className="w-6 h-6" />
-            <span className="text-xs font-semibold mt-1">Event</span>
-          </button>
-          
-          <button
-            onClick={() => setActivePage('profile')}
-            className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
-              activePage === 'profile' 
-                ? 'bg-[#FDB913] text-black' 
-                : 'text-gray-600 hover:text-[#0B6E4F]'
-            }`}
-          >
-            <User className="w-6 h-6" />
-            <span className="text-xs font-semibold mt-1">Profile</span>
-          </button>
-          
-          <button
-            onClick={() => setActivePage('more')}
-            className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
-              activePage === 'more' 
-                ? 'bg-[#FDB913] text-black' 
-                : 'text-gray-600 hover:text-[#0B6E4F]'
-            }`}
-          >
-            <Menu className="w-6 h-6" />
-            <span className="text-xs font-semibold mt-1">More</span>
-          </button>
-        </div>
-      </nav>
 
       {/* Reporting Wizard Modal */}
       {activePage === 'report' && (
