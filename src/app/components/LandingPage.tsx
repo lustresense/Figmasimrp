@@ -11,28 +11,28 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
     {
       id: 1,
       name: 'Lingkungan',
-      description: 'Peduli Sampah - Manajemen limbah & lingkungan',
+      description: 'Peduli kebersihan dan kelestarian lingkungan',
       icon: Leaf,
       color: '#10B981'
     },
     {
       id: 2,
       name: 'Gotong Royong',
-      description: 'Kebersamaan - Kerja bakti & kohesi sosial',
+      description: 'Kebersamaan dan kerja bakti warga',
       icon: Users,
       color: '#3B82F6'
     },
     {
       id: 3,
       name: 'Ekonomi Kreatif',
-      description: 'Kemandirian - UMKM & Wirausaha',
+      description: 'Pengembangan UMKM dan wirausaha',
       icon: Briefcase,
       color: '#F59E0B'
     },
     {
       id: 4,
       name: 'Keamanan',
-      description: 'Siskamling - Jaga malam & keamanan warga',
+      description: 'Keamanan dan ketertiban kampung',
       icon: Shield,
       color: '#EF4444'
     }
