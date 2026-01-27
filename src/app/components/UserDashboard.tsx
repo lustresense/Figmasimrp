@@ -23,7 +23,7 @@ interface UserDashboardProps {
 type Tab = 'home' | 'events' | 'profile' | 'more';
 
 export function UserDashboard({ user, authToken, onLogout, onNavigate, currentView, onViewChange }: UserDashboardProps) {
-  const [activePage, setActivePage] = useState<'home' | 'events' | 'report' | 'profile'>('home');
+  const [activePage, setActivePage] = useState<'home' | 'events' | 'report' | 'profile' | 'more'>('home');
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -38,13 +38,27 @@ export function UserDashboard({ user, authToken, onLogout, onNavigate, currentVi
 
   // Handle scroll for navigation opacity
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     const handleScroll = () => {
-      const scrollPosition = window.scrollY;
-      setScrolled(scrollPosition > 10);
+      // Throttle scroll events
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      timeoutId = setTimeout(() => {
+        const scrollPosition = window.scrollY;
+        setScrolled(scrollPosition > 10);
+      }, 50); // Throttle to 50ms
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, []);
 
   const fetchEvents = async () => {
