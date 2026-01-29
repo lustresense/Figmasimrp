@@ -1,257 +1,241 @@
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { Leaf, Users, Briefcase, Shield } from 'lucide-react';
 
 interface LandingPageProps {
   onNavigate: (page: 'login' | 'register') => void;
 }
 
 export function LandingPage({ onNavigate }: LandingPageProps) {
-  const pillars = [
-    {
-      id: 1,
-      name: 'Lingkungan',
-      description: 'Peduli kebersihan dan kelestarian lingkungan',
-      icon: Leaf,
-      color: '#10B981'
-    },
-    {
-      id: 2,
-      name: 'Gotong Royong',
-      description: 'Kebersamaan dan kerja bakti warga',
-      icon: Users,
-      color: '#3B82F6'
-    },
-    {
-      id: 3,
-      name: 'Ekonomi Kreatif',
-      description: 'Pengembangan UMKM dan wirausaha',
-      icon: Briefcase,
-      color: '#F59E0B'
-    },
-    {
-      id: 4,
-      name: 'Keamanan',
-      description: 'Keamanan dan ketertiban kampung',
-      icon: Shield,
-      color: '#EF4444'
-    }
-  ];
-
   return (
-    <div className="size-full overflow-auto bg-gradient-to-b from-[#0B6E4F] to-[#064835]">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* Header */}
-      <header className="bg-white shadow-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 md:gap-3">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-[#0B6E4F] rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-lg md:text-xl">SR</span>
+      <header className="border-b bg-white/80 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-green-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                SP
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">SIMRP</h1>
+                <p className="text-xs text-gray-600">Sistem Informasi Manajemen Relawan</p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-bold text-base md:text-xl text-[#0B6E4F]">SIM RELAWAN</h1>
-              <p className="text-xs text-gray-600 hidden sm:block">Kampung Pancasila</p>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onNavigate('login')}>
+                Masuk
+              </Button>
+              <Button onClick={() => onNavigate('register')}>
+                Daftar Relawan
+              </Button>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => onNavigate('login')}
-              className="border-[#0B6E4F] text-[#0B6E4F] hover:bg-[#0B6E4F] hover:text-white text-sm md:text-base px-3 md:px-4"
-              size="sm"
-            >
-              Masuk
-            </Button>
-            <Button 
-              onClick={() => onNavigate('register')}
-              className="bg-[#FDB913] text-black hover:bg-[#E5A711] text-sm md:text-base px-3 md:px-4"
-              size="sm"
-            >
-              Daftar
-            </Button>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-16 text-center text-white">
-        <h2 className="text-4xl md:text-5xl font-bold mb-4">
-          Bersama Membangun<br />Kampung Pancasila yang Lebih Baik
-        </h2>
-        <p className="text-xl mb-8 text-green-100 max-w-3xl mx-auto">
-          Platform digital yang menghubungkan warga aktif untuk berkontribusi dalam program pembangunan kampung melalui gotong royong, lingkungan, ekonomi kreatif, dan keamanan.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button 
-            size="lg"
-            onClick={() => onNavigate('register')}
-            className="bg-[#FDB913] text-black hover:bg-[#E5A711] text-lg px-8"
-          >
-            Mulai Sekarang
-          </Button>
-          <Button 
-            size="lg"
-            className="bg-white text-[#0B6E4F] hover:bg-gray-100 border-2 border-white text-lg px-8"
-            onClick={() => {
-              // Scroll to features or events section
-              const featuresSection = document.querySelector('#features-section');
-              if (featuresSection) {
-                featuresSection.scrollIntoView({ behavior: 'smooth' });
-              }
-            }}
-          >
-            Lihat Event
-          </Button>
+      <section className="container mx-auto px-4 py-16">
+        <div className="text-center max-w-3xl mx-auto">
+          <div className="inline-block mb-4 px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+            The Pillar-Balance & Maturity Engine
+          </div>
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+            Kampung Pancasila Surabaya
+          </h2>
+          <p className="text-xl text-gray-600 mb-8">
+            Sistem informasi <strong>kampung-centric</strong> untuk mengelola data relawan, kegiatan, 
+            dan capaian Kampung Pancasila secara terstruktur dan terukur.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Button size="lg" onClick={() => onNavigate('register')} className="text-lg px-8">
+              Bergabung Sebagai Relawan
+            </Button>
+            <Button size="lg" variant="outline" onClick={() => onNavigate('login')} className="text-lg px-8">
+              Login
+            </Button>
+          </div>
         </div>
       </section>
 
       {/* 4 Pillars Section */}
       <section className="container mx-auto px-4 py-16">
-        <h3 className="text-3xl font-bold text-center text-white mb-12">
-          4 Pilar Kampung Pancasila
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-          {pillars.map((pillar) => {
-            const IconComponent = pillar.icon;
-            return (
-              <Card key={pillar.id} className="hover:shadow-xl transition-shadow border-2 flex flex-col" style={{ borderColor: pillar.color }}>
-                <CardHeader className="flex-1">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 mx-auto" style={{ backgroundColor: pillar.color }}>
-                    <IconComponent className="w-8 h-8 text-white" />
-                  </div>
-                  <CardTitle className="text-center text-lg">{pillar.name}</CardTitle>
-                  <CardDescription className="text-center text-sm">
-                    {pillar.description}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            );
-          })}
+        <h3 className="text-3xl font-bold text-center mb-12">4 Pilar Kampung Pancasila</h3>
+        <div className="grid md:grid-cols-4 gap-6">
+          <Card className="border-2 hover:border-yellow-400 transition-colors">
+            <CardHeader>
+              <div className="w-16 h-16 mx-auto bg-yellow-100 rounded-full flex items-center justify-center text-4xl mb-4">
+                🙏
+              </div>
+              <CardTitle className="text-center">Ketuhanan</CardTitle>
+              <CardDescription className="text-center">
+                Ketuhanan Yang Maha Esa
+              </CardDescription>
+            </CardHeader>
+          </Card>
+          
+          <Card className="border-2 hover:border-red-400 transition-colors">
+            <CardHeader>
+              <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center text-4xl mb-4">
+                ❤️
+              </div>
+              <CardTitle className="text-center">Kemanusiaan</CardTitle>
+              <CardDescription className="text-center">
+                Kemanusiaan yang Adil dan Beradab
+              </CardDescription>
+            </CardHeader>
+          </Card>
+          
+          <Card className="border-2 hover:border-teal-400 transition-colors">
+            <CardHeader>
+              <div className="w-16 h-16 mx-auto bg-teal-100 rounded-full flex items-center justify-center text-4xl mb-4">
+                🤝
+              </div>
+              <CardTitle className="text-center">Persatuan</CardTitle>
+              <CardDescription className="text-center">
+                Persatuan Indonesia
+              </CardDescription>
+            </CardHeader>
+          </Card>
+          
+          <Card className="border-2 hover:border-green-400 transition-colors">
+            <CardHeader>
+              <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center text-4xl mb-4">
+                ⚖️
+              </div>
+              <CardTitle className="text-center">Kerakyatan</CardTitle>
+              <CardDescription className="text-center">
+                Kerakyatan yang Dipimpin oleh Hikmat
+              </CardDescription>
+            </CardHeader>
+          </Card>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features-section" className="bg-white py-16">
+      <section className="bg-gray-50 py-16">
         <div className="container mx-auto px-4">
-          <h3 className="text-3xl font-bold text-center text-[#0B6E4F] mb-12">
-            Fitur Unggulan
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-[#FDB913] rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-4xl">🎯</span>
-              </div>
-              <h4 className="font-bold text-xl mb-2">Sistem Poin</h4>
-              <p className="text-gray-600">
-                Kumpulkan poin dari setiap kegiatan dan naik level
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-20 h-20 bg-[#FDB913] rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-4xl">🏆</span>
-              </div>
-              <h4 className="font-bold text-xl mb-2">Badge & Reward</h4>
-              <p className="text-gray-600">
-                Raih badge eksklusif dan sertifikat resmi
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-20 h-20 bg-[#FDB913] rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-4xl">📱</span>
-              </div>
-              <h4 className="font-bold text-xl mb-2">Offline Mode</h4>
-              <p className="text-gray-600">
-                Tetap bisa lapor kegiatan tanpa koneksi internet
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+          <h3 className="text-3xl font-bold text-center mb-12">Fitur Utama SIMRP</h3>
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🎯</span>
+                  Kampung-Centric
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">
+                  Fokus pada performa kampung, bukan kompetisi individual. 
+                  Setiap aktivitas berkontribusi untuk kemajuan kampung.
+                </p>
+              </CardContent>
+            </Card>
 
-      {/* Leaderboard Teaser */}
-      <section className="container mx-auto px-4 py-16">
-        <Card className="bg-white/95">
-          <CardHeader>
-            <CardTitle className="text-2xl text-center text-[#0B6E4F]">
-              🌟 Top Relawan Minggu Ini
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[
-                { rank: 1, name: '***', points: '***', badge: '🥇' },
-                { rank: 2, name: '***', points: '***', badge: '🥈' },
-                { rank: 3, name: '***', points: '***', badge: '🥉' }
-              ].map((item) => (
-                <div key={item.rank} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <span className="text-3xl">{item.badge}</span>
-                    <div>
-                      <div className="font-bold">{item.name}</div>
-                      <div className="text-sm text-gray-500">{item.points} poin</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 text-center">
-              <Button 
-                onClick={() => onNavigate('register')}
-                className="bg-[#0B6E4F] hover:bg-[#085A3E]"
-              >
-                Daftar untuk Lihat Leaderboard Lengkap
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">⚖️</span>
+                  Pillar-Balance Engine
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">
+                  Mekanisme otomatis untuk menjaga keseimbangan 4 pilar. 
+                  Pilar yang tertinggal mendapat dampak XP lebih tinggi.
+                </p>
+              </CardContent>
+            </Card>
 
-      {/* CTA Section */}
-      <section className="container mx-auto px-4 py-16 text-center">
-        <div className="bg-white rounded-2xl p-12 shadow-2xl">
-          <h3 className="text-3xl font-bold text-[#0B6E4F] mb-4">
-            Siap Menjadi Pahlawan Kampung?
-          </h3>
-          <p className="text-xl text-gray-600 mb-8">
-            Bergabung dengan ribuan relawan lainnya dan buat dampak nyata!
-          </p>
-          <Button 
-            size="lg"
-            onClick={() => onNavigate('register')}
-            className="bg-[#FDB913] text-black hover:bg-[#E5A711] text-xl px-12 py-6"
-          >
-            Daftar Sekarang
-          </Button>
-          
-          {/* Demo Credentials */}
-          <div className="mt-8 pt-8 border-t">
-            <p className="text-sm text-gray-500 mb-4">Demo Access (untuk testing):</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left max-w-2xl mx-auto">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="font-semibold text-sm text-[#0B6E4F] mb-2">🔑 Admin Login</div>
-                <div className="text-xs text-gray-600">
-                  <div>Username: <code className="bg-gray-200 px-2 py-1 rounded">admin</code></div>
-                  <div>Password: <code className="bg-gray-200 px-2 py-1 rounded">admin</code></div>
-                </div>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="font-semibold text-sm text-[#0B6E4F] mb-2">📝 Registrasi User</div>
-                <div className="text-xs text-gray-600">
-                  <div>Contoh Kode Pos:</div>
-                  <div><code className="bg-gray-200 px-2 py-1 rounded">60111</code> (Keputih, Sukolilo)</div>
-                </div>
-              </div>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">👥</span>
+                  Partisipasi Mudah
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">
+                  Relawan cukup mendaftar dan checklist kehadiran. 
+                  Tanpa beban laporan atau evaluasi subjektif.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">📊</span>
+                  XP & Leaderboard Kampung
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">
+                  Setiap kampung memiliki XP total dan per pilar. 
+                  Leaderboard menampilkan performa antar kampung.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🏛️</span>
+                  3-Tier Governance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">
+                  ASN Pendamping, Kelurahan/Kecamatan, dan OPD 
+                  memiliki dashboard sesuai kewenangan masing-masing.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🎁</span>
+                  Reward Ringan
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">
+                  Poin relawan dapat ditukar dengan reward non-fiskal 
+                  seperti tiket bus, akses layanan, atau sertifikat.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#064835] text-white py-8">
-        <div className="container mx-auto px-4 text-center">
-          <p className="mb-2">© 2025 SIM Relawan Kampung Pancasila</p>
-          <p className="text-sm text-green-200">
-            Dinas Komunikasi dan Informatika Kota Surabaya
-          </p>
+      <footer className="bg-gray-900 text-white py-8">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-8">
+            <div>
+              <h4 className="font-bold mb-4">SIMRP</h4>
+              <p className="text-gray-400 text-sm">
+                Sistem Informasi Manajemen Relawan Kampung Pancasila
+              </p>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4">Project Owner</h4>
+              <p className="text-gray-400 text-sm">
+                Dinas Komunikasi dan Informatika<br />
+                Kota Surabaya
+              </p>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4">Tim Pengembang</h4>
+              <p className="text-gray-400 text-sm">
+                Mahasiswa Kerja Praktik PENS
+              </p>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
+            © 2026 SIMRP - Kampung Pancasila Surabaya
+          </div>
         </div>
       </footer>
     </div>
