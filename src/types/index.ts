@@ -1,131 +1,413 @@
-// COMPLETE TYPE DEFINITIONS - SIMRP FINAL
+// SIMRP TYPE DEFINITIONS - KAMPUNG-CENTRIC SYSTEM
+// Based on Grand Design v1.0
 
+// ============================================
+// CORE PILLARS - 4 Pilar Kampung Pancasila
+// ============================================
+export type Pillar = 'ketuhanan' | 'kemanusiaan' | 'persatuan' | 'kerakyatan';
+
+export interface PillarScore {
+  ketuhanan: number;    // Divinity pillar
+  kemanusiaan: number;  // Humanity pillar
+  persatuan: number;    // Unity pillar
+  kerakyatan: number;   // Democracy pillar
+}
+
+export interface PillarLevel {
+  ketuhanan: number;    // Level 1-10
+  kemanusiaan: number;  // Level 1-10
+  persatuan: number;    // Level 1-10
+  kerakyatan: number;   // Level 1-10
+}
+
+// ============================================
+// KAMPUNG (VILLAGE) - Main Entity
+// ============================================
+export interface Kampung {
+  id: string;
+  nama: string;
+  kelurahan: string;
+  kecamatan: string;
+  kodePos: string;
+  
+  // XP & Level System (Kampung-Centric)
+  xpTotal: number;
+  levelKampung: number;
+  xpPerPillar: PillarScore;
+  levelPerPillar: PillarLevel;
+  
+  // Balance tracking
+  balanceScore: number; // 0-100, higher = more balanced
+  dominantPillar?: Pillar;
+  weakestPillar?: Pillar;
+  
+  // Metadata
+  totalKegiatan: number;
+  totalRelawan: number;
+  createdAt: string;
+  lastActivityAt?: string;
+}
+
+// ============================================
+// USER MANAGEMENT
+// ============================================
 export interface User {
   id: string;
   username: string;
   email: string;
-  password?: string;
+  password?: string; // Not stored in frontend
   name: string;
-  role: 'user' | 'moderator' | 'admin';
-  level: number;
-  levelName: string;
-  points: number;
-  badges: Badge[];
+  nik?: string;
+  phone?: string;
+  
+  // Role attributes (single account type)
+  isVerifiedKSH: boolean; // Kader Surabaya Hebat
+  kampungId?: string; // For KSH - which kampung they represent
+  
+  // Location
   kecamatan: string;
   kelurahan: string;
-  kodepos: string;
-  rw: string;
-  nik?: string;
-  pillarPoints: PillarPoints;
+  kampung?: string;
+  rw?: string;
+  rt?: string;
+  
+  // Volunteer tracking (simple, non-competitive)
+  participationCount: number;
+  contributionPoints: number; // For optional rewards only
+  certificates: Certificate[];
+  
+  // Metadata
   createdAt: string;
   lastActive?: string;
-  // Temporary adjustments (expire after 24h)
-  temporaryAdjustments?: TemporaryAdjustment[];
 }
 
-export interface Badge {
+export interface Certificate {
   id: string;
-  name: string;
-  description: string;
-  icon: string;
-  earnedAt: string;
-  type: 'achievement' | 'role' | 'special' | 'temporary';
-  expiresAt?: string; // For temporary badges
-  grantedBy?: string; // Admin ID who granted it
-}
-
-export interface TemporaryAdjustment {
-  id: string;
-  type: 'points' | 'badge' | 'level';
-  value: any;
-  reason: string;
-  grantedBy: string;
-  grantedAt: string;
-  expiresAt: string; // Always 24 hours from grantedAt
-  isExpired: boolean;
-}
-
-export interface PillarPoints {
-  environment: number;
-  community: number;
-  economy: number;
-  security: number;
-}
-
-export interface Event {
-  id: string;
-  title: string;
-  description: string;
-  pillar: 'environment' | 'community' | 'economy' | 'security';
+  activityId: string;
+  activityTitle: string;
+  pillar: Pillar;
   date: string;
-  time: string;
-  location: string;
-  kecamatan: string;
-  maxParticipants: number;
-  currentParticipants: number;
-  participants?: string[];
-  imageUrl?: string;
-  points: number;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-  createdBy: string;
-  createdAt: string;
+  issuedAt: string;
 }
 
-export interface Report {
+// ============================================
+// MODERATOR (3-TIER GOVERNANCE)
+// ============================================
+export type ModeratorTier = 'tier1_asn' | 'tier2_kelurahan' | 'tier2_kecamatan' | 'tier3_opd';
+
+export interface Moderator {
   id: string;
   userId: string;
-  eventId?: string;
-  pillar: 'environment' | 'community' | 'economy' | 'security';
-  participants: number;
-  location?: {
-    lat: number;
-    lng: number;
-    accuracy?: number;
-  };
-  photoUrl?: string;
-  photoData?: string;
-  outcomeTags?: string[];
-  description?: string;
-  isOfflineSubmission: boolean;
-  status: 'pending' | 'verified' | 'rejected';
-  points: number;
-  verifiedBy?: string;
-  verifiedAt?: string;
-  createdAt: string;
-}
-
-export interface RoleAssignment {
-  userId: string;
-  role: 'moderator';
-  assignedBy: string;
+  name: string;
+  email: string;
+  tier: ModeratorTier;
+  
+  // Tier 1 - ASN Pendamping
+  kampungBinaan?: string[]; // IDs of kampung they supervise
+  
+  // Tier 2 - Kelurahan/Kecamatan
+  wilayahKelurahan?: string;
+  wilayahKecamatan?: string;
+  
+  // Tier 3 - OPD
+  opdName?: string;
+  scopeCity?: boolean; // City-wide access
+  
+  // Metadata
   assignedAt: string;
-  reason?: string;
+  assignedBy: string;
   isActive: boolean;
 }
 
-// Validated Badges (prevent fraud)
-export interface ValidatedBadge {
+// ============================================
+// ACTIVITY/EVENT MANAGEMENT
+// ============================================
+export interface Activity {
   id: string;
-  name: string;
-  type: 'rt' | 'rw' | 'lurah' | 'camat' | 'custom';
-  kecamatan?: string;
-  kelurahan?: string;
-  rw?: string;
-  rt?: string;
-  maxAssignments: number; // How many users can have this badge
-  currentAssignments: number;
-  icon: string;
+  kampungId: string;
+  kampungName: string;
+  
+  // Basic info
+  title: string;
+  description: string;
+  pillar: Pillar;
+  
+  // Scheduling
+  date: string;
+  time: string;
+  location: string;
+  
+  // Volunteer quota
+  maxVolunteers: number;
+  currentVolunteers: number;
+  registeredVolunteers: string[]; // User IDs
+  
+  // Status
+  status: 'draft' | 'open' | 'full' | 'ongoing' | 'completed' | 'cancelled';
+  
+  // Created by KSH
+  createdBy: string; // KSH User ID
+  createdByName: string;
+  createdAt: string;
+  
+  // Output (filled after completion)
+  output?: ActivityOutput;
+  
+  // Verification
+  verificationStatus: 'pending' | 'verified' | 'rejected';
+  verifiedBy?: string;
+  verifiedAt?: string;
 }
 
-export interface AdminAction {
+export interface ActivityOutput {
+  summary: string; // Brief impact summary
+  participantCount: number;
+  photoUrls?: string[];
+  outcomes: string[]; // Structured outcomes
+  filledBy: string; // KSH User ID
+  filledAt: string;
+}
+
+export interface VolunteerChecklist {
   id: string;
-  adminId: string;
-  adminName: string;
-  targetUserId: string;
-  targetUserName: string;
-  action: 'add_points' | 'remove_points' | 'assign_badge' | 'remove_badge' | 'assign_role' | 'remove_role' | 'adjust_level';
-  details: any;
-  isTemporary: boolean;
+  activityId: string;
+  userId: string;
+  
+  // Simple checklist (no subjective evaluation)
+  attended: boolean;
+  checkedInAt?: string;
+  
+  // Metadata
+  createdAt: string;
+}
+
+// ============================================
+// PROPOSAL SYSTEM
+// ============================================
+export interface Proposal {
+  id: string;
+  kampungId: string;
+  
+  // Content
+  title: string;
+  description: string;
+  pillar: Pillar;
+  estimatedBudget?: number;
+  targetDate?: string;
+  
+  // Created by KSH only
+  createdBy: string;
+  createdByName: string;
+  createdAt: string;
+  
+  // Review flow
+  status: 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected';
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+}
+
+export interface Suggestion {
+  id: string;
+  userId: string;
+  userName: string;
+  
+  // Content (aspirational, non-binding)
+  title: string;
+  description: string;
+  pillar?: Pillar;
+  kampungId?: string;
+  
+  // Metadata
+  createdAt: string;
+  status: 'open' | 'acknowledged' | 'considered';
+}
+
+// ============================================
+// RECOMMENDATION SYSTEM (ASN Pendamping)
+// ============================================
+export interface Recommendation {
+  id: string;
+  kampungId: string;
+  moderatorId: string;
+  moderatorName: string;
+  
+  // Content
+  context: string; // Based on data observation
+  recommendation: string;
+  targetPillar?: Pillar;
+  priority: 'low' | 'medium' | 'high';
+  
+  // Metadata
+  createdAt: string;
+  status: 'active' | 'implemented' | 'archived';
+}
+
+// ============================================
+// PILLAR-BALANCE ENGINE
+// ============================================
+export interface PillarBalanceEngine {
+  kampungId: string;
+  
+  // Current state
+  currentBalance: number; // 0-100
+  pillarScores: PillarScore;
+  pillarLevels: PillarLevel;
+  
+  // Multipliers (based on balance)
+  multipliers: {
+    ketuhanan: number;    // 0.5 - 2.0
+    kemanusiaan: number;  // 0.5 - 2.0
+    persatuan: number;    // 0.5 - 2.0
+    kerakyatan: number;   // 0.5 - 2.0
+  };
+  
+  // Analysis
+  dominantPillar: Pillar;
+  weakestPillar: Pillar;
+  balanceStatus: 'balanced' | 'slight_imbalance' | 'significant_imbalance';
+  
+  // Recommendations
+  suggestedPillar: Pillar;
+  
+  lastCalculatedAt: string;
+}
+
+export interface XPCalculation {
+  activityId: string;
+  kampungId: string;
+  pillar: Pillar;
+  
+  // Raw XP
+  baseXP: number;
+  
+  // Multiplier from balance engine
+  balanceMultiplier: number;
+  
+  // Final XP awarded
+  finalXP: number;
+  
+  // Context
+  balanceScoreBefore: number;
+  balanceScoreAfter: number;
+  
+  calculatedAt: string;
+}
+
+// ============================================
+// LEADERBOARD (KAMPUNG-BASED)
+// ============================================
+export interface LeaderboardEntry {
+  rank: number;
+  kampungId: string;
+  kampungName: string;
+  kelurahan: string;
+  kecamatan: string;
+  
+  xpTotal: number;
+  levelKampung: number;
+  balanceScore: number;
+  
+  // Per-pillar breakdown
+  xpPerPillar: PillarScore;
+  levelPerPillar: PillarLevel;
+}
+
+export interface LeaderboardPillar {
+  pillar: Pillar;
+  entries: {
+    rank: number;
+    kampungId: string;
+    kampungName: string;
+    xp: number;
+    level: number;
+  }[];
+}
+
+// ============================================
+// REWARDS (VOLUNTEER - OPTIONAL)
+// ============================================
+export interface Reward {
+  id: string;
+  name: string;
+  description: string;
+  type: 'certificate' | 'bus_ticket' | 'service_access' | 'priority';
+  
+  // Cost in contribution points
+  pointsCost: number;
+  
+  // Availability
+  isActive: boolean;
+  stock?: number;
+  
+  // Metadata
+  icon?: string;
+  imageUrl?: string;
+}
+
+export interface RewardClaim {
+  id: string;
+  userId: string;
+  rewardId: string;
+  rewardName: string;
+  
+  pointsSpent: number;
+  
+  status: 'pending' | 'approved' | 'claimed' | 'expired';
+  claimedAt: string;
   expiresAt?: string;
-  timestamp: string;
+}
+
+// ============================================
+// ANALYTICS & REPORTING
+// ============================================
+export interface KampungAnalytics {
+  kampungId: string;
+  period: 'week' | 'month' | 'quarter' | 'year';
+  
+  // Activity metrics
+  totalActivities: number;
+  activitiesPerPillar: PillarScore;
+  averageParticipation: number;
+  
+  // XP trends
+  xpGrowth: number;
+  xpGrowthPerPillar: PillarScore;
+  
+  // Balance trends
+  balanceHistory: {
+    date: string;
+    score: number;
+  }[];
+  
+  // Volunteer engagement
+  uniqueVolunteers: number;
+  averageVolunteersPerActivity: number;
+  
+  generatedAt: string;
+}
+
+export interface CityAnalytics {
+  period: 'week' | 'month' | 'quarter' | 'year';
+  
+  // Aggregate metrics
+  totalKampung: number;
+  activeKampung: number;
+  totalActivities: number;
+  totalVolunteers: number;
+  
+  // Top performers
+  topKampung: LeaderboardEntry[];
+  
+  // Pillar distribution
+  activitiesByPillar: PillarScore;
+  averageBalanceScore: number;
+  
+  // Trends
+  activityTrend: {
+    date: string;
+    count: number;
+  }[];
+  
+  generatedAt: string;
 }
