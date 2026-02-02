@@ -61,7 +61,8 @@ Berikut adalah ekstraksi teks dari dokumen presentasi Sistem Informasi Manajemen
 * **Ekonomi:** Pemberdayaan UMKM dan pelatihan usaha mandiri.
 * **Kemasyarakatan:** Penyelesaian persoalan sosial internal dan keamanan.
 * **Sosial Budaya:** Penanaman nilai gotong royong dan keguyuban.
-* **Engine:** Pillar-Balance Engine untuk pemantauan real-time.
+
+**Engine Pemantau:** Pillar-Balance Engine untuk pemantauan real-time.
 
 ---
 
