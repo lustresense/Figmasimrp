@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
-import { CheckCircle, XCircle, LogOut, FileText, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, FileText, Clock } from 'lucide-react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { toast } from 'sonner';
-import { POVSwitcher } from '@/app/components/POVSwitcher';
-import { getLevelByRole, getProgressToNextLevel } from '@/data/levelingSystem';
+import { FloatingNavbar } from '@/app/components/ui/FloatingNavbar';
 
 interface ModeratorDashboardProps {
   user: any;
@@ -15,16 +14,14 @@ interface ModeratorDashboardProps {
   onNavigate: (page: any) => void;
   currentView: 'admin' | 'moderator' | 'user';
   onViewChange: (view: 'admin' | 'moderator' | 'user') => void;
+  moderatorTier: 1 | 2 | 3;
 }
 
-export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, currentView, onViewChange }: ModeratorDashboardProps) {
+export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, currentView, onViewChange, moderatorTier }: ModeratorDashboardProps) {
   const [reports, setReports] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-
-  // Calculate moderator level
-  const modLevel = getLevelByRole('moderator', user?.points || 0);
-  const levelProgress = getProgressToNextLevel('moderator', user?.points || 0);
+  const [activePage, setActivePage] = useState<'home' | 'events' | 'report' | 'profile' | 'more'>('home');
 
   useEffect(() => {
     fetchData();
@@ -112,66 +109,59 @@ export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, curr
   const verifiedReports = reports.filter(r => r.status === 'verified');
 
   return (
-    <div className="size-full flex flex-col bg-gray-50">
-      {/* Header */}
-      <header className="bg-[#3B82F6] text-white px-4 py-4 shadow-lg">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-bold text-lg flex items-center gap-2">
-              Moderator Dashboard
-              <Badge className="bg-white/20 text-white text-xs">
-                {modLevel.badge} {modLevel.name}
-              </Badge>
-            </h1>
-            <p className="text-sm opacity-80">{user?.points || 0} poin • {user.name}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <POVSwitcher
-              currentRole={user.role}
-              currentView={currentView}
-              onViewChange={onViewChange}
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onLogout}
-              className="border-white/20 text-white hover:bg-white/10"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Keluar
-            </Button>
-          </div>
-        </div>
-      </header>
+    <div className="size-full flex flex-col bg-white">
+      <FloatingNavbar
+        user={user}
+        activePage={activePage}
+        onLogout={onLogout}
+        onNavigate={(page) => setActivePage(page)}
+        userMode="relawan"
+        onModeChange={() => {}}
+        currentView={currentView}
+        onViewChange={onViewChange}
+        moderatorTier={moderatorTier}
+        onModeratorTierChange={() => {}}
+        theme="moderator"
+      />
 
       {/* Content */}
-      <div className="flex-1 overflow-auto p-4 space-y-4">
+      <div className="flex-1 overflow-auto p-4 pt-24 space-y-4">
+        <div className="rounded-3xl bg-gradient-to-r from-cyan-600 via-teal-600 to-emerald-500 text-white p-5 shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold">Moderator Dashboard</h1>
+              <p className="text-sm text-cyan-100">Tier {moderatorTier}</p>
+            </div>
+            <Badge className="bg-white/20 text-white">{user?.name}</Badge>
+          </div>
+        </div>
+
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
+          <Card className="border-cyan-100">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Menunggu Verifikasi</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-orange-600">{pendingReports.length}</div>
+              <div className="text-3xl font-bold text-cyan-700">{pendingReports.length}</div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-cyan-100">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Terverifikasi</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-600">{verifiedReports.length}</div>
+              <div className="text-3xl font-bold text-teal-600">{verifiedReports.length}</div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-cyan-100">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Total Laporan</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-blue-600">{reports.length}</div>
+              <div className="text-3xl font-bold text-cyan-600">{reports.length}</div>
             </CardContent>
           </Card>
         </div>

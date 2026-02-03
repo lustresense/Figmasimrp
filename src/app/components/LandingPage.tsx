@@ -101,7 +101,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </section>
 
       {/* 4 Pillars Section */}
-      <section className="bg-gray-50 py-20 border-y border-gray-100">
+      <section className="bg-[#FFF7D6] py-20 border-y border-[#F3E1A3]">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h3 className="text-3xl font-bold mb-4">4 Pilar Utama Program</h3>
@@ -194,7 +194,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </section>
 
       {/* Ecosystem & Roles */}
-      <section className="bg-gray-900 text-white py-24">
+      <section className="bg-[#0b5d3b] text-white py-24">
         <div className="container mx-auto px-4">
           <h3 className="text-3xl font-bold text-center mb-16">Ekosistem & Peran Pengguna</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

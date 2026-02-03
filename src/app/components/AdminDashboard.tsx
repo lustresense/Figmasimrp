@@ -173,22 +173,22 @@ export function AdminDashboard({ user, authToken, onLogout, onNavigate, currentV
   const upcomingEvents = events.filter(e => e.status === 'upcoming');
 
   return (
-    <div className="size-full flex flex-col bg-gray-50">
+    <div className="size-full flex flex-col bg-black text-white dark">
       {/* Admin Header */}
-      <header className="bg-[#FDB913] text-black px-4 py-4 shadow-lg">
+      <header className="bg-black text-white px-4 py-4 border-b border-white/10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-black/10 rounded-full flex items-center justify-center">
+            <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
               <Settings className="w-6 h-6" />
             </div>
             <div>
               <h1 className="font-bold text-lg flex items-center gap-2">
                 Admin Dashboard
-                <Badge className="bg-black/20 text-black text-xs">
+                <Badge className="bg-white/10 text-white text-xs">
                   {adminLevel.badge} {adminLevel.name}
                 </Badge>
               </h1>
-              <p className="text-sm opacity-80">{user?.points || 0} poin • {user.name}</p>
+              <p className="text-sm text-white/60">{user?.points || 0} poin • {user.name}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -201,7 +201,7 @@ export function AdminDashboard({ user, authToken, onLogout, onNavigate, currentV
               variant="outline"
               size="sm"
               onClick={onLogout}
-              className="border-black/20 hover:bg-black/10"
+              className="border-white/20 text-white hover:bg-white/10"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Keluar
@@ -323,7 +323,7 @@ export function AdminDashboard({ user, authToken, onLogout, onNavigate, currentV
                     .sort((a, b) => (b.points || 0) - (a.points || 0))
                     .slice(0, 10)
                     .map((u, idx) => (
-                      <div key={u.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={u.id} className="flex items-center justify-between p-3 bg-black text-white dark rounded-lg">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
                             idx === 0 ? 'bg-[#FDB913]' :

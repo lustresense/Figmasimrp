@@ -1,11 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Checkbox } from '@/app/components/ui/checkbox';
-import { Alert, AlertDescription } from '@/app/components/ui/alert';
-import { X, Camera, Upload, Loader2, AlertCircle, CheckCircle, Wifi, WifiOff } from 'lucide-react';
+import { X, Camera, Loader2, CheckCircle } from 'lucide-react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { toast } from 'sonner';
 
@@ -18,47 +17,16 @@ interface ReportingWizardProps {
 export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
   
   // Step 1: Evidence
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [participants, setParticipants] = useState('');
-  const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
   
   // Step 2: Outcome
   const [outcomeTags, setOutcomeTags] = useState<string[]>([]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    // Monitor online/offline status
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    // Get location when component mounts
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.warn('Geolocation access denied or unavailable:', error.message);
-        }
-      );
-    }
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -110,45 +78,28 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
         photoUrl: photo, // In production, upload to cloud storage first
         participants: parseInt(participants),
         outcomeTags,
-        location,
-        isOfflineSubmission: !isOnline,
         createdAt: new Date().toISOString()
       };
 
-      if (isOnline) {
-        // Submit directly to server
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/reports`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${authToken || publicAnonKey}`
-            },
-            body: JSON.stringify(reportData)
-          }
-        );
-
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-          toast.success('Laporan berhasil dikirim!');
-          onClose();
-        } else {
-          throw new Error(data.error || 'Gagal mengirim laporan');
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/reports`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken || publicAnonKey}`
+          },
+          body: JSON.stringify(reportData)
         }
-      } else {
-        // Save to localStorage for offline mode
-        const drafts = JSON.parse(localStorage.getItem('simrp_report_drafts') || '[]');
-        drafts.push({
-          ...reportData,
-          id: `draft-${Date.now()}`,
-          status: 'draft'
-        });
-        localStorage.setItem('simrp_report_drafts', JSON.stringify(drafts));
-        
-        toast.success('Laporan disimpan sebagai draft. Akan dikirim saat online.');
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success('Laporan berhasil dikirim!');
         onClose();
+      } else {
+        throw new Error(data.error || 'Gagal mengirim laporan');
       }
     } catch (error: any) {
       console.error('Error submitting report:', error);
@@ -163,7 +114,7 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
       <Card className="w-full max-w-lg max-h-[90vh] overflow-auto">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-xl text-[#0B6E4F]">
+            <CardTitle className="text-xl text-black">
               Lapor Kegiatan
             </CardTitle>
             <div className="text-sm text-gray-500 mt-1">
@@ -171,17 +122,6 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {isOnline ? (
-              <div className="flex items-center gap-1 text-green-600 text-sm font-medium">
-                <Wifi className="w-4 h-4" />
-                <span>Online</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 text-orange-600 text-sm font-medium">
-                <WifiOff className="w-4 h-4" />
-                <span>Offline</span>
-              </div>
-            )}
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-black transition-colors"
@@ -198,15 +138,6 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
               <div>
                 <h3 className="font-bold mb-3 text-lg text-black">📸 Bukti Kegiatan</h3>
                 
-                {!isOnline && (
-                  <Alert className="mb-4 border-orange-200 bg-orange-50 text-orange-800">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Mode Offline: Laporan akan disimpan sebagai draft dan dikirim otomatis saat online.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
                 <div className="space-y-4">
                   {/* Photo Upload */}
                   <div>
@@ -240,7 +171,7 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
                             <Camera className="w-8 h-8 text-black" />
                           </div>
                           <div className="text-sm font-medium text-gray-900">
-                            Klik untuk ambil foto
+                            Pilih foto kegiatan
                           </div>
                           <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                             GPS Terkunci Otomatis 🔒
@@ -272,22 +203,13 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
                     />
                   </div>
 
-                  {/* Location Info */}
-                  {location && (
-                    <div className="bg-green-50 border border-green-100 p-3 rounded-lg flex items-center gap-2 text-sm text-green-800">
-                      <CheckCircle className="h-4 w-4" />
-                      <span>
-                        📍 Lokasi GPS Valid: <strong>{location.lat.toFixed(6)}, {location.lng.toFixed(6)}</strong>
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
 
               <Button
                 onClick={() => setStep(2)}
                 disabled={!photo || !participants}
-                className="w-full bg-black text-white hover:bg-gray-800 font-bold h-12 rounded-xl"
+                className="w-full bg-green-700 text-white hover:bg-green-800 font-bold h-12 rounded-xl"
               >
                 Lanjut ke Step 2
               </Button>
@@ -314,7 +236,7 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
                       key={tag.id}
                       className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
                         outcomeTags.includes(tag.id)
-                          ? 'border-black bg-gray-50'
+                          ? 'border-green-700 bg-green-50'
                           : 'border-gray-100 hover:border-gray-300'
                       }`}
                       onClick={() => toggleOutcomeTag(tag.id)}
@@ -323,7 +245,7 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
                         <Checkbox
                           checked={outcomeTags.includes(tag.id)}
                           onCheckedChange={() => toggleOutcomeTag(tag.id)}
-                          className="data-[state=checked]:bg-black data-[state=checked]:text-white border-gray-300"
+                          className="data-[state=checked]:bg-green-700 data-[state=checked]:text-white border-gray-300"
                         />
                         <div className="flex-1">
                           <div className="font-bold text-gray-900">{tag.label}</div>
@@ -354,7 +276,7 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
                       Proses...
                     </>
                   ) : (
-                    isOnline ? 'Kirim Laporan' : 'Simpan Offline'
+                    'Kirim Laporan'
                   )}
                 </Button>
               </div>

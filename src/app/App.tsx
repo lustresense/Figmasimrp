@@ -35,6 +35,7 @@ export default function App() {
   
   // POV Switcher State - Admin can switch views
   const [currentView, setCurrentView] = useState<'admin' | 'moderator' | 'user'>('user');
+  const [moderatorTier, setModeratorTier] = useState<1 | 2 | 3>(1);
 
   // Seed database with sample data
   useSeedData();
@@ -44,6 +45,7 @@ export default function App() {
     const token = localStorage.getItem('simrp_auth_token');
     const userStr = localStorage.getItem('simrp_user');
     const savedView = localStorage.getItem('simrp_current_view') as 'admin' | 'moderator' | 'user' | null;
+    const savedTier = localStorage.getItem('simrp_moderator_tier');
     
     if (token && userStr) {
       try {
@@ -57,6 +59,9 @@ export default function App() {
         } else {
           // Default view based on role
           setCurrentView(user.role);
+        }
+        if (savedTier === '1' || savedTier === '2' || savedTier === '3') {
+          setModeratorTier(parseInt(savedTier, 10) as 1 | 2 | 3);
         }
         
         setCurrentPage('dashboard');
@@ -100,6 +105,7 @@ export default function App() {
     localStorage.removeItem('simrp_auth_token');
     localStorage.removeItem('simrp_user');
     localStorage.removeItem('simrp_current_view');
+    localStorage.removeItem('simrp_moderator_tier');
     setCurrentPage('landing');
   };
 
@@ -112,6 +118,11 @@ export default function App() {
       setCurrentView(view);
       localStorage.setItem('simrp_current_view', view);
     }
+  };
+
+  const handleModeratorTierChange = (tier: 1 | 2 | 3) => {
+    setModeratorTier(tier);
+    localStorage.setItem('simrp_moderator_tier', String(tier));
   };
 
   if (loading) {
@@ -155,9 +166,10 @@ export default function App() {
               user={currentUser}
               authToken={authToken}
               onLogout={handleLogout}
-              onNavigate={navigateTo}
               currentView={currentView}
               onViewChange={handleViewChange}
+              moderatorTier={moderatorTier}
+              onModeratorTierChange={handleModeratorTierChange}
             />
           )}
           
@@ -169,6 +181,7 @@ export default function App() {
               onNavigate={navigateTo}
               currentView={currentView}
               onViewChange={handleViewChange}
+              moderatorTier={moderatorTier}
             />
           )}
           

@@ -1,32 +1,49 @@
 import { useState, useEffect } from 'react';
-import { Home, Calendar, User, Menu, TrendingUp, Award, MapPin } from 'lucide-react';
+import { Calendar, User, TrendingUp, MapPin, Crown, Users } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
+import { Input } from '@/app/components/ui/input';
+import { Textarea } from '@/app/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { Progress } from '@/app/components/ui/progress';
 import { Badge } from '@/app/components/ui/badge';
 import { EventList } from '@/app/components/EventList';
 import { ReportingWizard } from '@/app/components/ReportingWizard';
 import { UserProfile } from '@/app/components/UserProfile';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
-import { getLevelByRole, getProgressToNextLevel } from '@/data/levelingSystem';
 import { FloatingNavbar } from '@/app/components/ui/FloatingNavbar';
 
 interface UserDashboardProps {
   user: any;
   authToken: string | null;
   onLogout: () => void;
-  onNavigate: (page: any) => void;
   currentView: 'admin' | 'moderator' | 'user';
   onViewChange: (view: 'admin' | 'moderator' | 'user') => void;
+  moderatorTier: 1 | 2 | 3;
+  onModeratorTierChange: (tier: 1 | 2 | 3) => void;
 }
 
-export function UserDashboard({ user, authToken, onLogout, onNavigate, currentView, onViewChange }: UserDashboardProps) {
-  const [activePage, setActivePage] = useState<'home' | 'events' | 'report' | 'profile'>('home');
+export function UserDashboard({
+  user,
+  authToken,
+  onLogout,
+  currentView,
+  onViewChange,
+  moderatorTier,
+  onModeratorTierChange
+}: UserDashboardProps) {
+  const [activePage, setActivePage] = useState<'home' | 'events' | 'report' | 'profile' | 'more'>('home');
   const [events, setEvents] = useState<any[]>([]);
-  
-  // Calculate user level
-  const userLevel = getLevelByRole('user', user?.points || 0);
-  const levelProgress = getProgressToNextLevel('user', user?.points || 0);
+  const [userMode, setUserMode] = useState<'relawan' | 'ksh'>(user?.isKsh ? 'ksh' : 'relawan');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [creatingEvent, setCreatingEvent] = useState(false);
+  const [newEvent, setNewEvent] = useState({
+    title: '',
+    description: '',
+    pillar: '1',
+    date: '',
+    time: '',
+    location: ''
+  });
 
   useEffect(() => {
     fetchEvents();
@@ -46,88 +63,134 @@ export function UserDashboard({ user, authToken, onLogout, onNavigate, currentVi
       if (response.ok) {
         const data = await response.json();
         setEvents(data.events || []);
+      } else {
+        const allowLocalAdmin = import.meta.env.VITE_ALLOW_LOCAL_ADMIN === 'true';
+        if (response.status === 401 && allowLocalAdmin) {
+          setEvents([]);
+        }
       }
     } catch (error) {
       console.error('Error fetching events:', error);
     }
   };
 
-  const getPillarName = (pillar: number) => {
-    // 1: Lingkungan, 2: Ekonomi, 3: Kemasyarakatan, 4: Sosial Budaya
-    const pillars = ['Lingkungan', 'Ekonomi', 'Kemasyarakatan', 'Sosial Budaya'];
-    return pillars[pillar - 1] || 'Umum';
+  const handleCreateEvent = async () => {
+    if (!newEvent.title || !newEvent.date || !newEvent.pillar) {
+      toast.error('Judul, pilar, dan tanggal wajib diisi.');
+      return;
+    }
+
+    setCreatingEvent(true);
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/events`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken || publicAnonKey}`
+          },
+          body: JSON.stringify({
+            title: newEvent.title,
+            description: newEvent.description,
+            pillar: parseInt(newEvent.pillar, 10),
+            date: newEvent.date,
+            time: newEvent.time,
+            location: newEvent.location,
+            organizer: user?.name || 'KSH'
+          })
+        }
+      );
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Gagal membuat event');
+      }
+
+      toast.success('Event berhasil dibuat.');
+      setIsCreateOpen(false);
+      setNewEvent({
+        title: '',
+        description: '',
+        pillar: '1',
+        date: '',
+        time: '',
+        location: ''
+      });
+      fetchEvents();
+    } catch (error: any) {
+      toast.error(error.message || 'Gagal membuat event');
+    } finally {
+      setCreatingEvent(false);
+    }
   };
 
-  const getPillarColor = (pillar: number) => {
-    const colors = ['#10B981', '#F59E0B', '#EF4444', '#3B82F6'];
-    return colors[pillar - 1] || '#6B7280';
-  };
+  const kampungName = user?.kampung?.name || user?.kampungName || user?.kelurahan || 'Belum Terdata';
+  const kampungXp = user?.kampung?.xp ?? 0;
+  const kampungRelawan = user?.kampung?.volunteers ?? 0;
+  const kampungLeaderboard = user?.kampungLeaderboard || [];
+  const kampungDibantu = user?.kampungDibantu || [];
+  const kampungPernahBantu = user?.kampungPernahBantu || [];
 
   return (
     <div className="size-full flex flex-col bg-white">
-      {/* Floating Navbar Replaces the old static header */}
-      <FloatingNavbar 
-        user={user} 
-        onLogout={onLogout} 
-        onNavigate={(page) => setActivePage(page)} 
+      <FloatingNavbar
+        user={user}
+        activePage={activePage}
+        onLogout={onLogout}
+        onNavigate={(page) => setActivePage(page)}
+        userMode={userMode}
+        onModeChange={setUserMode}
+        currentView={currentView}
+        onViewChange={onViewChange}
+        moderatorTier={moderatorTier}
+        onModeratorTierChange={onModeratorTierChange}
+        theme="user"
       />
 
       {/* Content Area */}
-      <div className="flex-1 overflow-auto pb-24 px-4">
+      <div className="flex-1 overflow-auto px-4 pt-24 pb-8">
         {/* Home Tab */}
         {activePage === 'home' && (
-          <div className="space-y-6 pt-2">
-            
-            {/* User Stats Summary (Previously in Header) */}
-            <div className="bg-black text-white rounded-3xl p-6 shadow-xl relative overflow-hidden">
-               <div className="absolute top-0 right-0 w-32 h-32 bg-[#FFC107] rounded-full blur-[60px] opacity-20 -mr-10 -mt-10"></div>
-               <div className="relative z-10 flex justify-between items-end">
-                 <div>
-                   <p className="text-gray-400 text-sm mb-1">Total Poin</p>
-                   <h2 className="text-4xl font-bold text-[#FFC107]">{user.points || 0} XP</h2>
-                   <div className="flex items-center gap-2 mt-2">
-                     <Badge variant="outline" className="text-white border-white/20 bg-white/10">
-                        {userLevel.name}
-                     </Badge>
-                     <span className="text-xs text-gray-400">Level {userLevel.level}</span>
-                   </div>
-                 </div>
-                 <div className="text-right">
-                   <div className="w-12 h-12 bg-[#FFC107] text-black rounded-full flex items-center justify-center font-bold text-xl mb-1 ml-auto">
-                     {userLevel.badge}
-                   </div>
-                 </div>
-               </div>
+          <div className="space-y-6">
+            <div className="bg-gradient-to-br from-[#0b5d3b] via-[#0f6a43] to-[#14824f] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden">
+              <div className="absolute inset-0 opacity-15" style={{
+                backgroundImage: 'radial-gradient(circle at 20% 20%, rgba(255,214,79,0.35) 0 20%, transparent 22%), radial-gradient(circle at 80% 30%, rgba(255,214,79,0.25) 0 16%, transparent 18%), radial-gradient(circle at 30% 80%, rgba(255,255,255,0.18) 0 18%, transparent 20%)'
+              }} />
+              <div className="absolute top-0 right-0 w-40 h-40 bg-yellow-400 rounded-full blur-[70px] opacity-25 -mr-16 -mt-12"></div>
+              <div className="relative z-10 flex items-end justify-between gap-6">
+                <div>
+                  <p className="text-green-100 text-xs uppercase tracking-wide mb-1">Kampung Kamu</p>
+                  <h2 className="text-2xl font-bold">{kampungName}</h2>
+                  {userMode === 'ksh' && (
+                    <Badge className="mt-2 bg-yellow-400 text-black w-fit">KSH Verified</Badge>
+                  )}
+                  <div className="flex items-center gap-2 mt-2 text-sm text-green-100">
+                    <MapPin className="w-4 h-4" />
+                    <span>{user?.kecamatan || 'Kecamatan belum terdata'}</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-green-100 text-xs">XP Kampung</p>
+                  <div className="text-3xl font-extrabold text-yellow-300">{kampungXp}</div>
+                  <div className="text-xs text-green-100">Relawan: {kampungRelawan}</div>
+                </div>
+              </div>
             </div>
 
-            {/* Next Level Progress */}
-            {levelProgress.next && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm text-gray-600 font-medium">
-                  <span>Progress Level</span>
-                  <span>{Math.round(levelProgress.progress)}%</span>
-                </div>
-                <Progress value={levelProgress.progress} className="h-2 bg-gray-100" indicatorClassName="bg-black" />
-                <p className="text-xs text-gray-400 text-right">
-                  {levelProgress.pointsNeeded} XP lagi menuju {levelProgress.next.name}
-                </p>
-              </div>
-            )}
-
-            {/* Action Grid */}
             <div className="grid grid-cols-2 gap-4">
               <Button
                 onClick={() => setActivePage('events')}
-                className="h-auto aspect-[4/3] flex flex-col items-center justify-center gap-3 bg-white border border-gray-200 shadow-sm hover:shadow-md hover:bg-gray-50 text-black rounded-2xl"
+                className="h-auto aspect-[4/3] flex flex-col items-center justify-center gap-3 bg-white border border-green-100 shadow-sm hover:shadow-md hover:bg-green-50 text-black rounded-2xl"
               >
-                <div className="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center">
+                <div className="w-12 h-12 bg-green-100 text-green-700 rounded-full flex items-center justify-center">
                   <Calendar className="w-6 h-6" />
                 </div>
                 <span className="font-semibold">Cari Event</span>
               </Button>
               <Button
                 onClick={() => setActivePage('report')}
-                className="h-auto aspect-[4/3] flex flex-col items-center justify-center gap-3 bg-white border border-gray-200 shadow-sm hover:shadow-md hover:bg-gray-50 text-black rounded-2xl"
+                className="h-auto aspect-[4/3] flex flex-col items-center justify-center gap-3 bg-white border border-yellow-100 shadow-sm hover:shadow-md hover:bg-yellow-50 text-black rounded-2xl"
               >
                 <div className="w-12 h-12 bg-yellow-50 text-yellow-600 rounded-full flex items-center justify-center">
                   <TrendingUp className="w-6 h-6" />
@@ -136,39 +199,101 @@ export function UserDashboard({ user, authToken, onLogout, onNavigate, currentVi
               </Button>
             </div>
 
-            {/* Badges Section */}
-            {user.badges && user.badges.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-bold text-lg flex items-center gap-2">
-                  <Award className="w-5 h-5 text-[#FFC107]" />
-                  Koleksi Badge
-                </h3>
-                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                  {user.badges.map((badge: any, idx: number) => (
-                    <div key={idx} className="flex-shrink-0 bg-gray-50 border border-gray-100 p-3 rounded-xl flex flex-col items-center gap-2 min-w-[100px]">
-                      <span className="text-2xl">{badge.badge || '🏅'}</span>
-                      <span className="text-xs font-medium text-center line-clamp-2">{badge.name || badge}</span>
+            <Card className="border border-green-100">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2 text-green-800">
+                  <Crown className="w-5 h-5 text-yellow-500" />
+                  Leaderboard Kampung
+                </CardTitle>
+                <CardDescription>Peringkat berbasis performa kampung</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {kampungLeaderboard.length === 0 ? (
+                  <p className="text-sm text-gray-500">Belum ada data leaderboard.</p>
+                ) : (
+                  kampungLeaderboard.map((item: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-green-50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-white border border-green-200 flex items-center justify-center font-bold text-green-700">
+                          {idx + 1}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-sm">{item.name}</div>
+                          <div className="text-xs text-gray-500">{item.kecamatan}</div>
+                        </div>
+                      </div>
+                      <div className="text-sm font-bold text-green-700">{item.xp} XP</div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Quick Location Info */}
-             <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-3 text-sm text-gray-600">
-               <MapPin className="w-4 h-4 text-gray-400" />
-               <span>
-                 Lokasi: <strong>{user.kelurahan}</strong>, {user.kecamatan}
-               </span>
-             </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
 
+            {userMode !== 'ksh' && (
+              <>
+                <Card className="border border-yellow-100">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2 text-yellow-700">
+                      <Users className="w-5 h-5 text-yellow-500" />
+                      Kampung Pernah Dibantu
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {kampungPernahBantu.length === 0 ? (
+                      <p className="text-sm text-gray-500">Belum ada riwayat kampung yang kamu bantu.</p>
+                    ) : (
+                      kampungPernahBantu.map((item: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-yellow-50">
+                          <div>
+                            <div className="font-semibold text-sm">{item.name}</div>
+                            <div className="text-xs text-gray-500">{item.kecamatan}</div>
+                          </div>
+                          <Badge className="bg-yellow-400 text-black">{item.xp} XP</Badge>
+                        </div>
+                      ))
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="border border-green-100">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-green-800">Kampung Kamu Pernah Dibantu</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {kampungDibantu.length === 0 ? (
+                      <p className="text-sm text-gray-500">Belum ada data kampung yang pernah membantu.</p>
+                    ) : (
+                      kampungDibantu.map((item: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-green-50">
+                          <div>
+                            <div className="font-semibold text-sm">{item.name}</div>
+                            <div className="text-xs text-gray-500">{item.kecamatan}</div>
+                          </div>
+                          <Badge className="bg-green-600 text-white">{item.xp} XP</Badge>
+                        </div>
+                      ))
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </div>
         )}
 
         {/* Events Tab */}
         {activePage === 'events' && (
-          <div className="pt-2">
-            <h2 className="text-2xl font-bold mb-4">Daftar Kegiatan</h2>
+          <div className="pt-2 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-2xl font-bold">Daftar Kegiatan</h2>
+              {userMode === 'ksh' && (
+                <Button
+                  className="bg-green-700 text-white hover:bg-green-800"
+                  onClick={() => setIsCreateOpen(true)}
+                >
+                  Buat Kegiatan
+                </Button>
+              )}
+            </div>
             <EventList 
               events={events}
               authToken={authToken}
@@ -200,37 +325,68 @@ export function UserDashboard({ user, authToken, onLogout, onNavigate, currentVi
                   <User className="w-5 h-5 mr-3" />
                   Profil Lengkap
                 </Button>
-                 {/* POV Switcher for Admins */}
-                {(user.role === 'admin' || user.role === 'moderator') && (
-                  <div className="pt-4 border-t">
-                    <p className="text-xs text-gray-500 mb-2 font-semibold uppercase">Admin Controls</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      <Button 
-                        size="sm" 
-                        variant={currentView === 'user' ? 'default' : 'outline'}
-                        onClick={() => onViewChange('user')}
-                        className={currentView === 'user' ? "bg-black text-white" : ""}
-                      >
-                        User View
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant={currentView === 'moderator' ? 'default' : 'outline'}
-                        onClick={() => onViewChange('moderator')}
-                        className={currentView === 'moderator' ? "bg-black text-white" : ""}
-                      >
-                        Mod View
-                      </Button>
-                      {user.role === 'admin' && (
-                        <Button 
-                          size="sm" 
+                {user.role === 'admin' && (
+                  <div className="pt-4 border-t space-y-4">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-2 font-semibold uppercase">Kategori User</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          size="sm"
+                          variant={userMode === 'relawan' ? 'default' : 'outline'}
+                          onClick={() => setUserMode('relawan')}
+                          className={userMode === 'relawan' ? "bg-green-600 text-white" : ""}
+                        >
+                          Relawan
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={userMode === 'ksh' ? 'default' : 'outline'}
+                          onClick={() => setUserMode('ksh')}
+                          className={userMode === 'ksh' ? "bg-yellow-500 text-black" : ""}
+                        >
+                          KSH
+                        </Button>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-2 font-semibold uppercase">Moderator Tier</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[1,2,3].map((tier) => (
+                          <Button
+                            key={tier}
+                            size="sm"
+                            variant={moderatorTier === tier ? 'default' : 'outline'}
+                            onClick={() => {
+                              onModeratorTierChange(tier as 1|2|3);
+                              onViewChange('moderator');
+                            }}
+                            className={moderatorTier === tier ? "bg-cyan-600 text-white" : ""}
+                          >
+                            Tier {tier}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-2 font-semibold uppercase">Admin</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          size="sm"
+                          variant={currentView === 'user' ? 'default' : 'outline'}
+                          onClick={() => onViewChange('user')}
+                          className={currentView === 'user' ? "bg-green-700 text-white" : ""}
+                        >
+                          User View
+                        </Button>
+                        <Button
+                          size="sm"
                           variant={currentView === 'admin' ? 'default' : 'outline'}
                           onClick={() => onViewChange('admin')}
                           className={currentView === 'admin' ? "bg-black text-white" : ""}
                         >
                           Admin View
                         </Button>
-                      )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -253,58 +409,85 @@ export function UserDashboard({ user, authToken, onLogout, onNavigate, currentVi
         )}
       </div>
 
-      {/* Bottom Navigation - Minimalist Black & White */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 pb-safe pt-2 px-6 h-20 shadow-[0_-5px_20px_rgba(0,0,0,0.02)] z-40">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setActivePage('home')}
-            className={`flex flex-col items-center justify-center w-16 h-14 rounded-2xl transition-all ${
-              activePage === 'home' 
-                ? 'bg-black text-[#FFC107]' 
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            <Home className="w-6 h-6" />
-            {activePage === 'home' && <span className="text-[10px] font-bold mt-1">Home</span>}
-          </button>
-          
-          <button
-            onClick={() => setActivePage('events')}
-            className={`flex flex-col items-center justify-center w-16 h-14 rounded-2xl transition-all ${
-              activePage === 'events' 
-                ? 'bg-black text-[#FFC107]' 
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            <Calendar className="w-6 h-6" />
-            {activePage === 'events' && <span className="text-[10px] font-bold mt-1">Event</span>}
-          </button>
-          
-          <button
-            onClick={() => setActivePage('profile')}
-            className={`flex flex-col items-center justify-center w-16 h-14 rounded-2xl transition-all ${
-              activePage === 'profile' 
-                ? 'bg-black text-[#FFC107]' 
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            <User className="w-6 h-6" />
-            {activePage === 'profile' && <span className="text-[10px] font-bold mt-1">Profile</span>}
-          </button>
-          
-          <button
-            onClick={() => setActivePage('more')}
-            className={`flex flex-col items-center justify-center w-16 h-14 rounded-2xl transition-all ${
-              activePage === 'more' 
-                ? 'bg-black text-[#FFC107]' 
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            <Menu className="w-6 h-6" />
-            {activePage === 'more' && <span className="text-[10px] font-bold mt-1">Menu</span>}
-          </button>
-        </div>
-      </nav>
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Buat Kegiatan Baru (KSH)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-semibold">Judul Kegiatan</label>
+              <Input
+                value={newEvent.title}
+                onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Contoh: Aksi Bersih Kampung"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold">Deskripsi</label>
+              <Textarea
+                value={newEvent.description}
+                onChange={(e) => setNewEvent(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Ringkasan kegiatan..."
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-semibold">Pilar</label>
+                <select
+                  className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                  value={newEvent.pillar}
+                  onChange={(e) => setNewEvent(prev => ({ ...prev, pillar: e.target.value }))}
+                >
+                  <option value="1">Lingkungan</option>
+                  <option value="2">Ekonomi</option>
+                  <option value="3">Kemasyarakatan</option>
+                  <option value="4">Sosial Budaya</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-semibold">Tanggal</label>
+                <Input
+                  type="date"
+                  value={newEvent.date}
+                  onChange={(e) => setNewEvent(prev => ({ ...prev, date: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-semibold">Waktu</label>
+                <Input
+                  type="time"
+                  value={newEvent.time}
+                  onChange={(e) => setNewEvent(prev => ({ ...prev, time: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold">Lokasi</label>
+                <Input
+                  value={newEvent.location}
+                  onChange={(e) => setNewEvent(prev => ({ ...prev, location: e.target.value }))}
+                  placeholder="Balai RW / Lapangan"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              className="bg-green-700 text-white hover:bg-green-800"
+              onClick={handleCreateEvent}
+              disabled={creatingEvent}
+            >
+              {creatingEvent ? 'Membuat...' : 'Simpan'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Reporting Wizard Modal */}
       {activePage === 'report' && (
