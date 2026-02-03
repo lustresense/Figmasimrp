@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/app/components/ui/alert';
 import { ArrowLeft, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
-import { findByKodepos } from '@/data/geographicData';
 
 interface RegisterPageProps {
   onNavigate: (page: 'landing' | 'login') => void;
@@ -28,38 +27,68 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
   });
 
   const [kodeposValid, setKodeposValid] = useState<boolean | null>(null);
+  const [kelurahanOptions, setKelurahanOptions] = useState<Array<{ kelurahan: string; kecamatan: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   // Auto-fill kecamatan dan kelurahan based on kodepos
   useEffect(() => {
-    if (formData.kodepos.length === 5) {
-      const result = findByKodepos(formData.kodepos);
-      
-      if (result) {
-        setFormData(prev => ({
-          ...prev,
-          kecamatan: result.kecamatan.nama,
-          kelurahan: result.kelurahan.nama
-        }));
-        setKodeposValid(true);
-      } else {
+    const loadKodepos = async () => {
+      if (formData.kodepos.length !== 5) {
+        setKodeposValid(null);
+        setKelurahanOptions([]);
         setFormData(prev => ({
           ...prev,
           kecamatan: '',
           kelurahan: ''
         }));
-        setKodeposValid(false);
+        return;
       }
-    } else {
-      setKodeposValid(null);
-      setFormData(prev => ({
-        ...prev,
-        kecamatan: '',
-        kelurahan: ''
-      }));
-    }
+
+      try {
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/kodepos/${formData.kodepos}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${publicAnonKey}`
+            }
+          }
+        );
+        if (!res.ok) {
+          setKodeposValid(false);
+          setKelurahanOptions([]);
+          setFormData(prev => ({ ...prev, kecamatan: '', kelurahan: '' }));
+          return;
+        }
+        const data = await res.json();
+        const list = (data?.kelurahan || []).map((k: any) => ({
+          kelurahan: k.kelurahan,
+          kecamatan: k.kecamatan
+        }));
+        setKelurahanOptions(list);
+        if (list.length === 1) {
+          setFormData(prev => ({
+            ...prev,
+            kecamatan: list[0].kecamatan,
+            kelurahan: list[0].kelurahan
+          }));
+        } else {
+          setFormData(prev => ({
+            ...prev,
+            kecamatan: '',
+            kelurahan: ''
+          }));
+        }
+        setKodeposValid(list.length > 0);
+      } catch (err) {
+        setKodeposValid(false);
+        setKelurahanOptions([]);
+        setFormData(prev => ({ ...prev, kecamatan: '', kelurahan: '' }));
+      }
+    };
+
+    loadKodepos();
   }, [formData.kodepos]);
 
   const handleChange = (field: string, value: string) => {
@@ -93,7 +122,7 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
       return false;
     }
     if (!formData.kecamatan || !formData.kelurahan) {
-      setError('Kecamatan dan Kelurahan harus terisi otomatis dari kode pos');
+      setError('Pilih kelurahan sesuai kode pos');
       return false;
     }
     return true;
@@ -354,7 +383,7 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   <div className="space-y-2">
                     <Label htmlFor="kecamatan" className="text-gray-500">
-                      Kecamatan (Otomatis)
+                      Kecamatan
                     </Label>
                     <Input
                       id="kecamatan"
@@ -367,15 +396,40 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
 
                   <div className="space-y-2">
                     <Label htmlFor="kelurahan" className="text-gray-500">
-                      Kelurahan (Otomatis)
+                      Kelurahan
                     </Label>
-                    <Input
-                      id="kelurahan"
-                      placeholder="-"
-                      value={formData.kelurahan}
-                      disabled
-                      className="bg-gray-50 border-gray-200 font-medium text-black"
-                    />
+                    {kelurahanOptions.length > 1 ? (
+                      <Select
+                        value={formData.kelurahan}
+                        onValueChange={(value) => {
+                          const selected = kelurahanOptions.find((k) => k.kelurahan === value);
+                          setFormData((prev) => ({
+                            ...prev,
+                            kelurahan: value,
+                            kecamatan: selected?.kecamatan || ''
+                          }));
+                        }}
+                      >
+                        <SelectTrigger className="bg-white border-gray-300 rounded-xl">
+                          <SelectValue placeholder="Pilih kelurahan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {kelurahanOptions.map((k) => (
+                            <SelectItem key={`${k.kelurahan}-${k.kecamatan}`} value={k.kelurahan}>
+                              {k.kelurahan} • {k.kecamatan}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        id="kelurahan"
+                        placeholder="-"
+                        value={formData.kelurahan}
+                        disabled
+                        className="bg-gray-50 border-gray-200 font-medium text-black"
+                      />
+                    )}
                   </div>
                 </div>
               </div>

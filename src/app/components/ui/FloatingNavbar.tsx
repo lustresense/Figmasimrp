@@ -5,7 +5,7 @@ import { Badge } from '@/app/components/ui/badge';
 
 interface FloatingNavbarProps {
   user: any;
-  activePage: 'home' | 'events' | 'report' | 'profile' | 'more';
+  activePage: string;
   onLogout: () => void;
   onNavigate: (page: any) => void;
   userMode: 'relawan' | 'ksh';
@@ -15,6 +15,7 @@ interface FloatingNavbarProps {
   moderatorTier: 1 | 2 | 3;
   onModeratorTierChange: (tier: 1 | 2 | 3) => void;
   theme?: 'user' | 'moderator';
+  navItems?: Array<{ key: string; label: string; icon: any }>;
 }
 
 export function FloatingNavbar({
@@ -28,7 +29,8 @@ export function FloatingNavbar({
   onViewChange,
   moderatorTier,
   onModeratorTierChange,
-  theme = 'user'
+  theme = 'user',
+  navItems
 }: FloatingNavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -51,6 +53,13 @@ export function FloatingNavbar({
         ksh: 'bg-yellow-400 text-black'
       };
 
+  const items = navItems || [
+    { key: 'home', label: 'Home', icon: Home },
+    { key: 'events', label: 'Event', icon: Calendar },
+    { key: 'report', label: 'Lapor', icon: TrendingUp },
+    { key: 'profile', label: 'Profil', icon: UserIcon }
+  ];
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -69,12 +78,7 @@ export function FloatingNavbar({
               isScrolled ? 'shadow-xl' : ''
             } ${palette.border}`}
           >
-            {[
-              { key: 'home', label: 'Home', icon: Home },
-              { key: 'events', label: 'Event', icon: Calendar },
-              { key: 'report', label: 'Lapor', icon: TrendingUp },
-              { key: 'profile', label: 'Profil', icon: UserIcon },
-            ].map((item) => {
+            {items.map((item) => {
               const Icon = item.icon;
               const isActive = activePage === item.key;
               return (
@@ -105,8 +109,8 @@ export function FloatingNavbar({
 
       {/* Mobile Menu Overlay */}
       {isMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden" onClick={() => setIsMenuOpen(false)}>
-          <div className="absolute top-24 right-4 w-64 bg-white rounded-2xl shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}>
+          <div className="absolute top-24 right-4 w-72 max-w-[90vw] bg-white rounded-2xl shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-gray-100 bg-gray-50">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 text-white rounded-full flex items-center justify-center font-bold ${
@@ -136,21 +140,23 @@ export function FloatingNavbar({
                     <div className="grid grid-cols-2 gap-2">
                       <Button
                         size="sm"
-                        variant={userMode === 'relawan' ? 'default' : 'outline'}
+                        variant={currentView === 'user' && userMode === 'relawan' ? 'default' : 'outline'}
                         onClick={() => {
                           onModeChange('relawan');
+                          onViewChange('user');
                         }}
-                        className={userMode === 'relawan' ? (isModeratorTheme ? 'bg-cyan-600 text-white' : 'bg-green-600 text-white') : ''}
+                        className={currentView === 'user' && userMode === 'relawan' ? (isModeratorTheme ? 'bg-cyan-600 text-white' : 'bg-green-600 text-white') : ''}
                       >
                         Relawan
                       </Button>
                       <Button
                         size="sm"
-                        variant={userMode === 'ksh' ? 'default' : 'outline'}
+                        variant={currentView === 'user' && userMode === 'ksh' ? 'default' : 'outline'}
                         onClick={() => {
                           onModeChange('ksh');
+                          onViewChange('user');
                         }}
-                        className={userMode === 'ksh' ? (isModeratorTheme ? 'bg-cyan-200 text-cyan-900' : 'bg-yellow-400 text-black') : ''}
+                        className={currentView === 'user' && userMode === 'ksh' ? (isModeratorTheme ? 'bg-cyan-200 text-cyan-900' : 'bg-yellow-400 text-black') : ''}
                       >
                         KSH
                       </Button>
@@ -164,12 +170,12 @@ export function FloatingNavbar({
                         <Button
                           key={tier}
                           size="sm"
-                          variant={moderatorTier === tier ? 'default' : 'outline'}
+                          variant={currentView === 'moderator' && moderatorTier === tier ? 'default' : 'outline'}
                           onClick={() => {
                             onModeratorTierChange(tier as 1 | 2 | 3);
                             onViewChange('moderator');
                           }}
-                          className={moderatorTier === tier ? 'bg-cyan-600 text-white' : ''}
+                          className={currentView === 'moderator' && moderatorTier === tier ? 'bg-cyan-600 text-white' : ''}
                         >
                           Tier {tier}
                         </Button>

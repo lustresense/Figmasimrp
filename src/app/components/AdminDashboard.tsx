@@ -213,12 +213,12 @@ export function AdminDashboard({ user, authToken, onLogout, onNavigate, currentV
       {/* Content */}
       <div className="flex-1 overflow-auto p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5 mb-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="users">Pengguna</TabsTrigger>
-            <TabsTrigger value="events">Event</TabsTrigger>
-            <TabsTrigger value="reports">Laporan</TabsTrigger>
-            <TabsTrigger value="godmode" className="bg-gradient-to-r from-purple-500 to-pink-500 text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600">
+          <TabsList className="grid w-full grid-cols-5 mb-6 bg-neutral-900 border border-neutral-800">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70">Overview</TabsTrigger>
+            <TabsTrigger value="users" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70">Pengguna</TabsTrigger>
+            <TabsTrigger value="events" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70">Event</TabsTrigger>
+            <TabsTrigger value="reports" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70">Laporan</TabsTrigger>
+            <TabsTrigger value="godmode" className="bg-gradient-to-r from-purple-600 to-pink-600 text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-700 data-[state=active]:to-pink-700">
               <Crown className="w-4 h-4 mr-1" />
               God Mode
             </TabsTrigger>
@@ -228,7 +228,7 @@ export function AdminDashboard({ user, authToken, onLogout, onNavigate, currentV
           <TabsContent value="overview" className="space-y-4">
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
+              <Card className="bg-neutral-900 text-white border-neutral-800">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Total Relawan</CardTitle>
                   <Users className="h-4 w-4 text-[#0B6E4F]" />
@@ -239,7 +239,7 @@ export function AdminDashboard({ user, authToken, onLogout, onNavigate, currentV
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-neutral-900 text-white border-neutral-800">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Total Poin</CardTitle>
                   <TrendingUp className="h-4 w-4 text-[#FDB913]" />
@@ -250,7 +250,7 @@ export function AdminDashboard({ user, authToken, onLogout, onNavigate, currentV
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-neutral-900 text-white border-neutral-800">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Event Aktif</CardTitle>
                   <Calendar className="h-4 w-4 text-blue-600" />
@@ -261,7 +261,7 @@ export function AdminDashboard({ user, authToken, onLogout, onNavigate, currentV
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-neutral-900 text-white border-neutral-800">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Laporan Pending</CardTitle>
                   <FileText className="h-4 w-4 text-orange-600" />
@@ -274,7 +274,7 @@ export function AdminDashboard({ user, authToken, onLogout, onNavigate, currentV
             </div>
 
             {/* Charts Placeholder */}
-            <Card>
+            <Card className="bg-neutral-900 text-white border-neutral-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 className="w-5 h-5" />
@@ -310,7 +310,7 @@ export function AdminDashboard({ user, authToken, onLogout, onNavigate, currentV
             </Card>
 
             {/* Top Users */}
-            <Card>
+            <Card className="bg-neutral-900 text-white border-neutral-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Award className="w-5 h-5" />
@@ -351,7 +351,7 @@ export function AdminDashboard({ user, authToken, onLogout, onNavigate, currentV
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-4">
-            <Card>
+            <Card className="bg-neutral-900 text-white border-neutral-800">
               <CardHeader>
                 <CardTitle>Manajemen Pengguna</CardTitle>
                 <CardDescription>Total {users.length} pengguna terdaftar</CardDescription>
@@ -378,7 +378,7 @@ export function AdminDashboard({ user, authToken, onLogout, onNavigate, currentV
 
           {/* Events Tab */}
           <TabsContent value="events" className="space-y-4">
-            <Card>
+            <Card className="bg-neutral-900 text-white border-neutral-800">
               <CardHeader>
                 <CardTitle>Manajemen Event</CardTitle>
                 <CardDescription>Total {events.length} event</CardDescription>
@@ -413,7 +413,7 @@ export function AdminDashboard({ user, authToken, onLogout, onNavigate, currentV
 
           {/* Reports Tab */}
           <TabsContent value="reports" className="space-y-4">
-            <Card>
+            <Card className="bg-neutral-900 text-white border-neutral-800">
               <CardHeader>
                 <CardTitle>Verifikasi Laporan</CardTitle>
                 <CardDescription>

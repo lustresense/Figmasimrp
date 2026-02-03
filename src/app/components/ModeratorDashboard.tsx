@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
-import { CheckCircle, XCircle, FileText, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, FileText, Clock, LayoutGrid, ShieldCheck, Lightbulb, BarChart3 } from 'lucide-react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { toast } from 'sonner';
 import { FloatingNavbar } from '@/app/components/ui/FloatingNavbar';
@@ -21,11 +21,16 @@ export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, curr
   const [reports, setReports] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activePage, setActivePage] = useState<'home' | 'events' | 'report' | 'profile' | 'more'>('home');
+  const [activePage, setActivePage] = useState<string>('overview');
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const next = moderatorTier === 1 ? "monitor" : moderatorTier === 2 ? "verify" : "aggregate";
+    setActivePage(next);
+  }, [moderatorTier]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -122,6 +127,25 @@ export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, curr
         moderatorTier={moderatorTier}
         onModeratorTierChange={() => {}}
         theme="moderator"
+        navItems={
+          moderatorTier === 1
+            ? [
+                { key: "monitor", label: "Monitoring", icon: BarChart3 },
+                { key: "rekom", label: "Rekom", icon: Lightbulb },
+                { key: "overview", label: "Ringkas", icon: LayoutGrid }
+              ]
+            : moderatorTier === 2
+            ? [
+                { key: "verify", label: "Verifikasi", icon: ShieldCheck },
+                { key: "events", label: "Kegiatan", icon: FileText },
+                { key: "overview", label: "Ringkas", icon: LayoutGrid }
+              ]
+            : [
+                { key: "aggregate", label: "Agregat", icon: BarChart3 },
+                { key: "insight", label: "Insight", icon: Lightbulb },
+                { key: "overview", label: "Ringkas", icon: LayoutGrid }
+              ]
+        }
       />
 
       {/* Content */}
@@ -166,8 +190,8 @@ export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, curr
           </Card>
         </div>
 
-        {/* Pending Reports */}
-        <Card>
+        {activePage === "verify" && (
+          <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5" />
@@ -219,36 +243,21 @@ export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, curr
                           <span>{report.participants} orang</span>
                         </div>
 
-                        {report.location && (
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">Lokasi GPS:</span>
-                            <span className="text-xs text-gray-600">
-                              {report.location.lat?.toFixed(6)}, {report.location.lng?.toFixed(6)}
-                            </span>
-                          </div>
-                        )}
-
                         {report.outcomeTags?.length > 0 && (
                           <div>
                             <span className="font-semibold">Dampak:</span>
                             <div className="flex flex-wrap gap-1 mt-1">
                               {report.outcomeTags.map((tag: string, idx: number) => (
                                 <Badge key={idx} variant="outline" className="text-xs">
-                                  {tag === 'resolved' ? '✅ Masalah Teratasi' :
-                                   tag === 'followup' ? '⚠️ Butuh Tindak Lanjut' :
-                                   tag === 'economic' ? '💰 Transaksi Ekonomi' :
-                                   tag === 'participation' ? '📈 Partisipasi Meningkat' :
+                                  {tag === 'resolved' ? 'Masalah Teratasi' :
+                                   tag === 'followup' ? 'Butuh Tindak Lanjut' :
+                                   tag === 'economic' ? 'Transaksi Ekonomi' :
+                                   tag === 'participation' ? 'Partisipasi Meningkat' :
                                    tag}
                                 </Badge>
                               ))}
                             </div>
                           </div>
-                        )}
-
-                        {report.isOfflineSubmission && (
-                          <Badge variant="secondary" className="text-xs">
-                            📱 Dikirim dari Mode Offline
-                          </Badge>
                         )}
                       </div>
 
@@ -275,45 +284,137 @@ export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, curr
               </div>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        )}
 
-        {/* Verified Reports */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Laporan Terverifikasi
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {verifiedReports.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                Belum ada laporan terverifikasi
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {verifiedReports.slice(0, 10).map((report) => {
-                  const reporter = users.find(u => u.id === report.userId);
-                  
-                  return (
-                    <div key={report.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-semibold text-sm">{reporter?.name || 'Unknown'}</div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(report.createdAt).toLocaleDateString('id-ID')}
+        {activePage === "overview" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LayoutGrid className="w-5 h-5" />
+                Ringkasan Moderator
+              </CardTitle>
+              <CardDescription>Ringkasan data sesuai tier.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm text-gray-500">Gunakan menu atas untuk fitur sesuai tier.</div>
+            </CardContent>
+          </Card>
+        )}
+
+        {activePage === "monitor" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                Monitoring Kampung Binaan
+              </CardTitle>
+              <CardDescription>Tier 1 fokus monitoring & rekomendasi.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm text-gray-500">Data monitoring kampung akan muncul di sini.</div>
+            </CardContent>
+          </Card>
+        )}
+
+        {activePage === "rekom" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lightbulb className="w-5 h-5" />
+                Rekomendasi ASN
+              </CardTitle>
+              <CardDescription>Catatan rekomendasi berbasis data.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm text-gray-500">Belum ada rekomendasi terbaru.</div>
+            </CardContent>
+          </Card>
+        )}
+
+        {activePage === "events" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Kegiatan & Approval
+              </CardTitle>
+              <CardDescription>Tier 2 memverifikasi kegiatan.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm text-gray-500">Data kegiatan menunggu approval akan muncul di sini.</div>
+            </CardContent>
+          </Card>
+        )}
+
+        {activePage === "aggregate" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                Agregat Kota
+              </CardTitle>
+              <CardDescription>Tier 3 monitoring agregat kota.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm text-gray-500">Data agregat kota akan muncul di sini.</div>
+            </CardContent>
+          </Card>
+        )}
+
+        {activePage === "insight" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lightbulb className="w-5 h-5" />
+                Insight Program
+              </CardTitle>
+              <CardDescription>Analisis tren pilar dan rekomendasi kebijakan.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm text-gray-500">Belum ada insight terbaru.</div>
+            </CardContent>
+          </Card>
+        )}
+
+        {moderatorTier === 2 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Laporan Terverifikasi
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {verifiedReports.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  Belum ada laporan terverifikasi
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {verifiedReports.slice(0, 10).map((report) => {
+                    const reporter = users.find(u => u.id === report.userId);
+                    
+                    return (
+                      <div key={report.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <div className="font-semibold text-sm">{reporter?.name || 'Unknown'}</div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(report.createdAt).toLocaleDateString('id-ID')}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <Badge className="bg-green-500">Verified</Badge>
+                          <div className="text-xs text-gray-500 mt-1">{report.points} poin</div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <Badge className="bg-green-500">✓ Verified</Badge>
-                        <div className="text-xs text-gray-500 mt-1">{report.points} poin</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

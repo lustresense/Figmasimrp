@@ -11,6 +11,7 @@ import { ReportingWizard } from '@/app/components/ReportingWizard';
 import { UserProfile } from '@/app/components/UserProfile';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { FloatingNavbar } from '@/app/components/ui/FloatingNavbar';
+import { toast } from 'sonner';
 
 interface UserDashboardProps {
   user: any;
@@ -325,73 +326,88 @@ export function UserDashboard({
                   <User className="w-5 h-5 mr-3" />
                   Profil Lengkap
                 </Button>
-                {user.role === 'admin' && (
-                  <div className="pt-4 border-t space-y-4">
-                    <div>
-                      <p className="text-xs text-gray-500 mb-2 font-semibold uppercase">Kategori User</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          size="sm"
-                          variant={userMode === 'relawan' ? 'default' : 'outline'}
-                          onClick={() => setUserMode('relawan')}
-                          className={userMode === 'relawan' ? "bg-green-600 text-white" : ""}
-                        >
-                          Relawan
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={userMode === 'ksh' ? 'default' : 'outline'}
-                          onClick={() => setUserMode('ksh')}
-                          className={userMode === 'ksh' ? "bg-yellow-500 text-black" : ""}
-                        >
-                          KSH
-                        </Button>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-2 font-semibold uppercase">Moderator Tier</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[1,2,3].map((tier) => (
-                          <Button
-                            key={tier}
-                            size="sm"
-                            variant={moderatorTier === tier ? 'default' : 'outline'}
-                            onClick={() => {
-                              onModeratorTierChange(tier as 1|2|3);
-                              onViewChange('moderator');
-                            }}
-                            className={moderatorTier === tier ? "bg-cyan-600 text-white" : ""}
-                          >
-                            Tier {tier}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 mb-2 font-semibold uppercase">Admin</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          size="sm"
-                          variant={currentView === 'user' ? 'default' : 'outline'}
-                          onClick={() => onViewChange('user')}
-                          className={currentView === 'user' ? "bg-green-700 text-white" : ""}
-                        >
-                          User View
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={currentView === 'admin' ? 'default' : 'outline'}
-                          onClick={() => onViewChange('admin')}
-                          className={currentView === 'admin' ? "bg-black text-white" : ""}
-                        >
-                          Admin View
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                
               </CardContent>
             </Card>
+
+            {user?.role === 'admin' && (
+              <Card className="border border-gray-200">
+                <CardHeader>
+                  <CardTitle>Admin Mode (Preview)</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-gray-400 mb-2">Kategori User</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        size="sm"
+                        variant={currentView === 'user' && userMode === 'relawan' ? 'default' : 'outline'}
+                        onClick={() => {
+                          setUserMode('relawan');
+                          onViewChange('user');
+                        }}
+                        className={currentView === 'user' && userMode === 'relawan' ? 'bg-green-700 text-white' : ''}
+                      >
+                        Relawan
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={currentView === 'user' && userMode === 'ksh' ? 'default' : 'outline'}
+                        onClick={() => {
+                          setUserMode('ksh');
+                          onViewChange('user');
+                        }}
+                        className={currentView === 'user' && userMode === 'ksh' ? 'bg-yellow-400 text-black' : ''}
+                      >
+                        KSH
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-gray-400 mb-2">Moderator Tier</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[1, 2, 3].map((tier) => (
+                        <Button
+                          key={tier}
+                          size="sm"
+                          variant={currentView === 'moderator' && moderatorTier === tier ? 'default' : 'outline'}
+                          onClick={() => {
+                            onModeratorTierChange(tier as 1 | 2 | 3);
+                            onViewChange('moderator');
+                          }}
+                          className={currentView === 'moderator' && moderatorTier === tier ? 'bg-cyan-600 text-white' : ''}
+                        >
+                          Tier {tier}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-gray-400 mb-2">Admin</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        size="sm"
+                        variant={currentView === 'user' ? 'default' : 'outline'}
+                        onClick={() => onViewChange('user')}
+                        className={currentView === 'user' ? 'bg-green-700 text-white' : ''}
+                      >
+                        User View
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={currentView === 'admin' ? 'default' : 'outline'}
+                        onClick={() => onViewChange('admin')}
+                        className={currentView === 'admin' ? 'bg-black text-white' : ''}
+                      >
+                        Admin View
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             
             <Button 
               variant="destructive" 

@@ -268,6 +268,28 @@ app.put("/make-server-32aa5c5c/users/:id", async (c) => {
   }
 });
 
+// ==================== KODEPOS ROUTES ====================
+
+// Get kelurahan by kodepos (public)
+app.get("/make-server-32aa5c5c/kodepos/:kode", async (c) => {
+  try {
+    const kode = c.req.param('kode');
+    if (!kode || kode.length !== 5) {
+      return c.json({ error: 'Kodepos tidak valid' }, 400);
+    }
+
+    const data = await kv.get(`kodepos:${kode}`);
+    if (!data) {
+      return c.json({ error: 'Kodepos tidak ditemukan' }, 404);
+    }
+
+    return c.json(data);
+  } catch (error) {
+    console.error('Get kodepos error:', error);
+    return c.json({ error: 'Gagal memuat kodepos' }, 500);
+  }
+});
+
 // ==================== EVENT MANAGEMENT ROUTES ====================
 
 // Create event

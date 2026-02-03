@@ -48,7 +48,7 @@ export function POVSwitcher({ currentRole, currentView, onViewChange }: POVSwitc
       {/* POV Switcher Button */}
       <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="bg-black/10 hover:bg-black/20 text-black border-2 border-black/20"
+        className="bg-white/10 hover:bg-white/20 text-white border border-white/20"
         size="sm"
       >
         <Eye className="w-4 h-4 mr-2" />
@@ -66,7 +66,7 @@ export function POVSwitcher({ currentRole, currentView, onViewChange }: POVSwitc
           />
           
           {/* Dropdown Content */}
-          <Card className="absolute top-full right-0 mt-2 w-80 shadow-2xl z-50 border-2">
+          <Card className="absolute top-full right-0 mt-2 w-80 shadow-2xl z-50 border border-neutral-800 bg-neutral-950 text-white">
             <CardContent className="p-3">
               <div className="space-y-2">
                 {views.map((view) => {
@@ -86,17 +86,17 @@ export function POVSwitcher({ currentRole, currentView, onViewChange }: POVSwitc
                       disabled={!isAvailable}
                       className={`w-full p-3 rounded-lg text-left transition-all ${
                         isActive 
-                          ? 'bg-gradient-to-r from-[#0B6E4F] to-[#0D8A62] text-white shadow-lg'
+                          ? 'bg-white/10 text-white shadow-lg'
                           : isAvailable
-                          ? 'bg-gray-100 hover:bg-gray-200'
-                          : 'bg-gray-50 opacity-50 cursor-not-allowed'
+                          ? 'bg-white/5 hover:bg-white/10'
+                          : 'bg-white/5 opacity-50 cursor-not-allowed'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div 
                             className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                              isActive ? 'bg-white/20' : 'bg-white'
+                              isActive ? 'bg-white/20' : 'bg-white/10'
                             }`}
                             style={{ 
                               backgroundColor: isActive ? undefined : `${view.color}20`,
@@ -106,10 +106,10 @@ export function POVSwitcher({ currentRole, currentView, onViewChange }: POVSwitc
                             <ViewIcon className="w-5 h-5" />
                           </div>
                           <div>
-                            <div className={`font-bold text-sm ${isActive ? 'text-white' : 'text-gray-900'}`}>
+                            <div className={`font-bold text-sm ${isActive ? 'text-white' : 'text-white'}`}>
                               {view.name}
                             </div>
-                            <div className={`text-xs ${isActive ? 'text-white/80' : 'text-gray-500'}`}>
+                            <div className={`text-xs ${isActive ? 'text-white/80' : 'text-white/60'}`}>
                               {view.description}
                             </div>
                           </div>
@@ -120,7 +120,7 @@ export function POVSwitcher({ currentRole, currentView, onViewChange }: POVSwitc
                           </Badge>
                         )}
                         {!isAvailable && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs text-white/70 border-white/30">
                             Locked
                           </Badge>
                         )}
@@ -131,8 +131,8 @@ export function POVSwitcher({ currentRole, currentView, onViewChange }: POVSwitc
               </div>
 
               {/* Info Footer */}
-              <div className="mt-3 pt-3 border-t">
-                <div className="flex items-center gap-2 text-xs text-gray-600">
+              <div className="mt-3 pt-3 border-t border-white/10">
+                <div className="flex items-center gap-2 text-xs text-white/60">
                   <Eye className="w-3 h-3" />
                   <span>
                     {currentRole === 'admin' 

@@ -7,7 +7,6 @@ import { UserDashboard } from '@/app/components/UserDashboard';
 import { AdminDashboard } from '@/app/components/AdminDashboard';
 import { ModeratorDashboard } from '@/app/components/ModeratorDashboard';
 import { Toaster } from 'sonner';
-import { useSeedData } from '@/app/components/SeedData';
 
 type Page = 'landing' | 'login' | 'register' | 'dashboard';
 
@@ -38,7 +37,6 @@ export default function App() {
   const [moderatorTier, setModeratorTier] = useState<1 | 2 | 3>(1);
 
   // Seed database with sample data
-  useSeedData();
 
   // Check for existing session on mount
   useEffect(() => {
