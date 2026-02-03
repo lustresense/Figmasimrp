@@ -6,115 +6,118 @@ export function useSeedData() {
 
   useEffect(() => {
     const seedDatabase = async () => {
-      // Check if already seeded
-      const hasSeeded = localStorage.getItem('simrp_db_seeded');
+      // Check if already seeded in this session/browser
+      const hasSeeded = localStorage.getItem('simrp_db_seeded_v2');
       if (hasSeeded) {
         setSeeded(true);
         return;
       }
 
+      console.log('🌱 Starting database seeding...');
+
       try {
-        // Create sample events
+        // 1. Create Sample User (Budi Santoso)
+        // We use the auth endpoint which creates Supabase Auth user AND KV store entry
+        try {
+          const userPayload = {
+            email: 'budi@example.com',
+            password: 'password123',
+            name: 'Budi Santoso',
+            nik: '3578010101010001',
+            kecamatan: 'Sukolilo',
+            kelurahan: 'Keputih',
+            kodepos: '60111',
+            rw: '05'
+          };
+
+          const userRes = await fetch(
+            `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/auth/signup`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(userPayload)
+            }
+          );
+          
+          if (userRes.ok) {
+            console.log('✅ Created user: Budi Santoso');
+          } else {
+            console.log('ℹ️ User Budi Santoso likely already exists or error:', await userRes.text());
+          }
+        } catch (e) {
+          console.error('Error creating user:', e);
+        }
+
+        // 2. Create Sample Events
+        // Pillar mapping: 1=Lingkungan, 2=Ekonomi, 3=Kemasyarakatan, 4=Sosial Budaya
         const sampleEvents = [
           {
             title: 'Kerja Bakti Lingkungan RW 05',
-            description: 'Membersihkan selokan dan taman kampung bersama warga',
+            description: 'Membersihkan selokan dan taman kampung bersama warga. Wajib membawa alat kebersihan sendiri.',
             pillar: 1, // Lingkungan
             date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             time: '07:00 - 10:00 WIB',
-            location: 'Balai RW 05',
-            basePoints: 25,
+            location: 'Balai RW 05, Keputih',
+            basePoints: 50,
             participants: [],
             organizer: 'Ketua RW 05',
             status: 'upcoming'
           },
           {
-            title: 'Senam Pagi Sehat Bersama',
-            description: 'Kegiatan senam rutin bersama PKK dan warga untuk meningkatkan kesehatan',
-            pillar: 2, // Gotong Royong
+            title: 'Pelatihan Digital Marketing UMKM',
+            description: 'Workshop cara memasarkan produk UMKM melalui media sosial (TikTok & Instagram).',
+            pillar: 2, // Ekonomi
             date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            time: '06:00 - 07:00 WIB',
-            location: 'Lapangan Kampung',
-            basePoints: 15,
-            participants: [],
-            organizer: 'PKK Kelurahan',
-            status: 'upcoming'
-          },
-          {
-            title: 'Pelatihan UMKM Digital Marketing',
-            description: 'Workshop cara memasarkan produk UMKM melalui media sosial',
-            pillar: 3, // Ekonomi Kreatif
-            date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             time: '13:00 - 16:00 WIB',
-            location: 'Gedung Serbaguna Kelurahan',
-            basePoints: 40,
+            location: 'Aula Kelurahan Keputih',
+            basePoints: 75,
             participants: [],
-            organizer: 'Dinas Koperasi UMKM',
+            organizer: 'Diskopdag Surabaya',
             status: 'upcoming'
           },
           {
-            title: 'Ronda Malam Shift 1',
-            description: 'Kegiatan siskamling malam untuk menjaga keamanan kampung',
-            pillar: 4, // Keamanan
+            title: 'Ronda Malam Siskamling',
+            description: 'Jaga malam bergilir untuk keamanan lingkungan RT 02/RW 05.',
+            pillar: 3, // Kemasyarakatan (Keamanan is part of this or separate? Prompt says 4 pillars: Lingkungan, Ekonomi, Kemasyarakatan, Sosial Budaya. Usually Security is under Kemasyarakatan or separate. Let's assume pillar 3 covers general social issues including security if not specified otherwise, but previously 4 was Keamanan. Prompt says: "Lingkungan, Gotong Royong, Ekonomi Kreatif, Keamanan" in one place, but "Lingkungan, Ekonomi, Kemasyarakatan, Sosial Budaya" in another.
+            // Let's stick to the prompt's explicit list: "Lingkungan, Ekonomi, Kemasyarakatan, Sosial Budaya".
+            // So Ronda Malam -> Kemasyarakatan (3)
+            pillar: 3, 
             date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             time: '22:00 - 02:00 WIB',
-            location: 'Pos Kamling RW',
-            basePoints: 20,
+            location: 'Pos Kamling RT 02',
+            basePoints: 100,
             participants: [],
-            organizer: 'Ketua RT',
+            organizer: 'Sie Keamanan',
             status: 'upcoming'
           },
           {
-            title: 'Bazar UMKM Kampung',
-            description: 'Pameran dan penjualan produk UMKM warga',
-            pillar: 3, // Ekonomi Kreatif
-            date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            time: '08:00 - 15:00 WIB',
-            location: 'Lapangan Kampung',
+            title: 'Latihan Gamelan & Tari',
+            description: 'Pelestarian budaya lokal untuk persiapan pentas seni kampung.',
+            pillar: 4, // Sosial Budaya
+            date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            time: '19:00 - 21:00 WIB',
+            location: 'Pendopo Kecamatan',
+            basePoints: 40,
+            participants: [],
+            organizer: 'Karang Taruna',
+            status: 'upcoming'
+          },
+          {
+            title: 'Bank Sampah: Penimbangan Rutin',
+            description: 'Bawa sampah terpilah anda untuk ditimbang dan ditabung.',
+            pillar: 1, // Lingkungan
+            date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            time: '08:00 - 11:00 WIB',
+            location: 'Bank Sampah Maju Jaya',
             basePoints: 30,
             participants: [],
-            organizer: 'Forum UMKM',
-            status: 'upcoming'
-          },
-          {
-            title: 'Penghijauan dan Tanam Pohon',
-            description: 'Kegiatan menanam pohon di area taman kampung',
-            pillar: 1, // Lingkungan
-            date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            time: '07:00 - 11:00 WIB',
-            location: 'Taman Kampung',
-            basePoints: 30,
-            participants: [],
-            organizer: 'Kelompok Sadar Lingkungan',
-            status: 'upcoming'
-          },
-          {
-            title: 'Posyandu Balita & Lansia',
-            description: 'Pemeriksaan kesehatan rutin untuk balita dan lansia',
-            pillar: 2, // Gotong Royong
-            date: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            time: '08:00 - 12:00 WIB',
-            location: 'Balai RW',
-            basePoints: 20,
-            participants: [],
-            organizer: 'Kader Posyandu',
-            status: 'upcoming'
-          },
-          {
-            title: 'Sosialisasi Bank Sampah',
-            description: 'Edukasi tentang pemilahan sampah dan bank sampah',
-            pillar: 1, // Lingkungan
-            date: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            time: '15:00 - 17:00 WIB',
-            location: 'Balai RW',
-            basePoints: 25,
-            participants: [],
-            organizer: 'Tim Bank Sampah',
+            organizer: 'Ibu PKK',
             status: 'upcoming'
           }
         ];
 
-        // Post events to server
+        // Post events to server (create if not exist logic is hard on client, so we just post and server creates new IDs)
+        // To avoid spamming duplicates on every reload, we rely on the localStorage check at the top.
         for (const event of sampleEvents) {
           try {
             await fetch(
@@ -132,11 +135,13 @@ export function useSeedData() {
             console.error('Error creating event:', error);
           }
         }
+        
+        console.log('✅ Created sample events');
 
         // Mark as seeded
-        localStorage.setItem('simrp_db_seeded', 'true');
+        localStorage.setItem('simrp_db_seeded_v2', 'true');
         setSeeded(true);
-        console.log('✅ Database seeded with sample events');
+        console.log('✅ Database seeding complete');
       } catch (error) {
         console.error('Error seeding database:', error);
       }

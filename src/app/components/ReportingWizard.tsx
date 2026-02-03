@@ -49,7 +49,7 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
           });
         },
         (error) => {
-          console.error('Error getting location:', error);
+          console.warn('Geolocation access denied or unavailable:', error.message);
         }
       );
     }
@@ -172,19 +172,19 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
           </div>
           <div className="flex items-center gap-3">
             {isOnline ? (
-              <div className="flex items-center gap-1 text-green-600 text-sm">
+              <div className="flex items-center gap-1 text-green-600 text-sm font-medium">
                 <Wifi className="w-4 h-4" />
                 <span>Online</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1 text-orange-600 text-sm">
+              <div className="flex items-center gap-1 text-orange-600 text-sm font-medium">
                 <WifiOff className="w-4 h-4" />
                 <span>Offline</span>
               </div>
             )}
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 hover:text-black transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
@@ -196,10 +196,10 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
           {step === 1 && (
             <>
               <div>
-                <h3 className="font-semibold mb-3 text-lg">📸 Bukti Kegiatan</h3>
+                <h3 className="font-bold mb-3 text-lg text-black">📸 Bukti Kegiatan</h3>
                 
                 {!isOnline && (
-                  <Alert className="mb-4 border-orange-500">
+                  <Alert className="mb-4 border-orange-200 bg-orange-50 text-orange-800">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                       Mode Offline: Laporan akan disimpan sebagai draft dan dikirim otomatis saat online.
@@ -210,19 +210,19 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
                 <div className="space-y-4">
                   {/* Photo Upload */}
                   <div>
-                    <Label>Foto Kegiatan (Wajib)</Label>
+                    <Label className="text-black font-semibold">Foto Kegiatan (Wajib)</Label>
                     <div className="mt-2">
                       {photo ? (
                         <div className="relative">
                           <img 
                             src={photo} 
                             alt="Preview" 
-                            className="w-full h-64 object-cover rounded-lg"
+                            className="w-full h-64 object-cover rounded-xl border border-gray-200"
                           />
                           <Button
                             size="sm"
                             variant="destructive"
-                            className="absolute top-2 right-2"
+                            className="absolute top-2 right-2 rounded-full w-8 h-8 p-0"
                             onClick={() => {
                               setPhoto(null);
                               setPhotoFile(null);
@@ -234,14 +234,16 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
                       ) : (
                         <button
                           onClick={handleCameraClick}
-                          className="w-full h-64 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-3 hover:border-[#0B6E4F] transition-colors"
+                          className="w-full h-64 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-3 hover:border-black transition-all bg-gray-50 hover:bg-white group"
                         >
-                          <Camera className="w-12 h-12 text-gray-400" />
-                          <div className="text-sm text-gray-600">
+                          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                            <Camera className="w-8 h-8 text-black" />
+                          </div>
+                          <div className="text-sm font-medium text-gray-900">
                             Klik untuk ambil foto
                           </div>
-                          <div className="text-xs text-gray-500">
-                            GPS akan otomatis tercatat
+                          <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                            GPS Terkunci Otomatis 🔒
                           </div>
                         </button>
                       )}
@@ -258,7 +260,7 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
 
                   {/* Participants Count */}
                   <div>
-                    <Label htmlFor="participants">Jumlah Peserta</Label>
+                    <Label htmlFor="participants" className="text-black font-semibold">Jumlah Peserta</Label>
                     <Input
                       id="participants"
                       type="number"
@@ -266,18 +268,18 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
                       placeholder="Contoh: 25"
                       value={participants}
                       onChange={(e) => setParticipants(e.target.value)}
-                      className="mt-1"
+                      className="mt-1 border-gray-300 focus:border-black focus:ring-black"
                     />
                   </div>
 
                   {/* Location Info */}
                   {location && (
-                    <Alert>
+                    <div className="bg-green-50 border border-green-100 p-3 rounded-lg flex items-center gap-2 text-sm text-green-800">
                       <CheckCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        📍 Lokasi GPS tercatat: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
-                      </AlertDescription>
-                    </Alert>
+                      <span>
+                        📍 Lokasi GPS Valid: <strong>{location.lat.toFixed(6)}, {location.lng.toFixed(6)}</strong>
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -285,7 +287,7 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
               <Button
                 onClick={() => setStep(2)}
                 disabled={!photo || !participants}
-                className="w-full bg-[#0B6E4F] hover:bg-[#085A3E]"
+                className="w-full bg-black text-white hover:bg-gray-800 font-bold h-12 rounded-xl"
               >
                 Lanjut ke Step 2
               </Button>
@@ -296,24 +298,24 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
           {step === 2 && (
             <>
               <div>
-                <h3 className="font-semibold mb-3 text-lg">📊 Dampak Kegiatan</h3>
+                <h3 className="font-bold mb-3 text-lg text-black">📊 Dampak Kegiatan</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Pilih dampak yang sesuai dengan kegiatan (bisa lebih dari satu)
+                  Pilih dampak nyata yang dihasilkan dari kegiatan ini.
                 </p>
 
                 <div className="space-y-3">
                   {[
-                    { id: 'resolved', label: '✅ Masalah Teratasi', description: 'Kegiatan berhasil menyelesaikan masalah' },
-                    { id: 'followup', label: '⚠️ Butuh Tindak Lanjut Dinas', description: 'Perlu intervensi pemerintah' },
-                    { id: 'economic', label: '💰 Ada Transaksi Ekonomi', description: 'Terjadi aktivitas ekonomi/UMKM' },
-                    { id: 'participation', label: '📈 Partisipasi Meningkat', description: 'Warga semakin aktif terlibat' }
+                    { id: 'resolved', label: '✅ Masalah Teratasi', description: 'Solusi langsung untuk masalah warga.' },
+                    { id: 'followup', label: '⚠️ Butuh Tindak Lanjut', description: 'Perlu eskalasi ke Dinas terkait.' },
+                    { id: 'economic', label: '💰 Transaksi Ekonomi', description: 'Ada perputaran uang / UMKM.' },
+                    { id: 'participation', label: '📈 Guyub Rukun', description: 'Meningkatkan kohesi sosial warga.' }
                   ].map((tag) => (
                     <div
                       key={tag.id}
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                      className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
                         outcomeTags.includes(tag.id)
-                          ? 'border-[#0B6E4F] bg-green-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-black bg-gray-50'
+                          : 'border-gray-100 hover:border-gray-300'
                       }`}
                       onClick={() => toggleOutcomeTag(tag.id)}
                     >
@@ -321,10 +323,11 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
                         <Checkbox
                           checked={outcomeTags.includes(tag.id)}
                           onCheckedChange={() => toggleOutcomeTag(tag.id)}
+                          className="data-[state=checked]:bg-black data-[state=checked]:text-white border-gray-300"
                         />
                         <div className="flex-1">
-                          <div className="font-semibold">{tag.label}</div>
-                          <div className="text-sm text-gray-600">{tag.description}</div>
+                          <div className="font-bold text-gray-900">{tag.label}</div>
+                          <div className="text-sm text-gray-500">{tag.description}</div>
                         </div>
                       </div>
                     </div>
@@ -336,22 +339,22 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
                 <Button
                   variant="outline"
                   onClick={() => setStep(1)}
-                  className="flex-1"
+                  className="flex-1 h-12 rounded-xl border-gray-300"
                 >
                   Kembali
                 </Button>
                 <Button
                   onClick={handleSubmit}
                   disabled={loading || outcomeTags.length === 0}
-                  className="flex-1 bg-[#FDB913] text-black hover:bg-[#E5A711]"
+                  className="flex-1 bg-[#FFC107] text-black hover:bg-[#FFD54F] font-bold h-12 rounded-xl"
                 >
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {isOnline ? 'Mengirim...' : 'Menyimpan...'}
+                      Proses...
                     </>
                   ) : (
-                    isOnline ? 'Kirim Laporan' : 'Simpan Draft'
+                    isOnline ? 'Kirim Laporan' : 'Simpan Offline'
                   )}
                 </Button>
               </div>

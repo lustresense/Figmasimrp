@@ -126,6 +126,11 @@ export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, curr
             <p className="text-sm opacity-80">{user?.points || 0} poin • {user.name}</p>
           </div>
           <div className="flex items-center gap-2">
+            <POVSwitcher
+              currentRole={user.role}
+              currentView={currentView}
+              onViewChange={onViewChange}
+            />
             <Button
               variant="outline"
               size="sm"

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/app/components/ui/alert';
 import { ArrowLeft, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
-import { findAllByKodepos, type Kecamatan, type Kelurahan } from '@/data/geographicData';
+import { findByKodepos } from '@/data/geographicData';
 
 interface RegisterPageProps {
   onNavigate: (page: 'landing' | 'login') => void;
@@ -28,10 +28,6 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
   });
 
   const [kodeposValid, setKodeposValid] = useState<boolean | null>(null);
-  const [kelurahanOptions, setKelurahanOptions] = useState<Array<{
-    kecamatan: Kecamatan;
-    kelurahan: Kelurahan;
-  }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -39,39 +35,16 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
   // Auto-fill kecamatan dan kelurahan based on kodepos
   useEffect(() => {
     if (formData.kodepos.length === 5) {
-      const results = findAllByKodepos(formData.kodepos);
+      const result = findByKodepos(formData.kodepos);
       
-      if (results.length > 0) {
-        setKelurahanOptions(results);
-        
-        // If only one option, auto-fill
-        if (results.length === 1) {
-          setFormData(prev => ({
-            ...prev,
-            kecamatan: results[0].kecamatan.nama,
-            kelurahan: results[0].kelurahan.nama
-          }));
-        } else {
-          // Multiple options, user needs to select
-          // Keep kecamatan if all results have same kecamatan
-          const uniqueKecamatan = [...new Set(results.map(r => r.kecamatan.nama))];
-          if (uniqueKecamatan.length === 1) {
-            setFormData(prev => ({
-              ...prev,
-              kecamatan: uniqueKecamatan[0],
-              kelurahan: '' // User needs to select
-            }));
-          } else {
-            setFormData(prev => ({
-              ...prev,
-              kecamatan: '',
-              kelurahan: ''
-            }));
-          }
-        }
+      if (result) {
+        setFormData(prev => ({
+          ...prev,
+          kecamatan: result.kecamatan.nama,
+          kelurahan: result.kelurahan.nama
+        }));
         setKodeposValid(true);
       } else {
-        setKelurahanOptions([]);
         setFormData(prev => ({
           ...prev,
           kecamatan: '',
@@ -81,7 +54,6 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
       }
     } else {
       setKodeposValid(null);
-      setKelurahanOptions([]);
       setFormData(prev => ({
         ...prev,
         kecamatan: '',
@@ -201,58 +173,55 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
   };
 
   return (
-    <div className="size-full overflow-auto bg-gradient-to-b from-[#0B6E4F] to-[#064835]">
+    <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-[#FFC107] selection:text-black flex flex-col">
       {/* Header */}
-      <header className="bg-white shadow-md">
+      <header className="bg-white border-b border-gray-100">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <button 
             onClick={() => onNavigate('landing')}
-            className="flex items-center gap-2 text-[#0B6E4F] hover:text-[#085A3E]"
+            className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors font-medium"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="font-semibold">Kembali</span>
+            <span>Kembali</span>
           </button>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#0B6E4F] rounded-full flex items-center justify-center">
-              <span className="text-white font-bold">SR</span>
-            </div>
-            <div>
-              <h1 className="font-bold text-lg text-[#0B6E4F]">SIM RELAWAN</h1>
+            <div className="w-10 h-10 bg-black text-[#FFC107] rounded-lg flex items-center justify-center font-bold text-xl">
+              SR
             </div>
           </div>
         </div>
       </header>
 
       {/* Registration Form */}
-      <div className="container mx-auto px-4 py-8 flex items-center justify-center">
-        <Card className="w-full max-w-2xl">
-          <CardHeader>
-            <CardTitle className="text-2xl text-center text-[#0B6E4F]">
-              Daftar Relawan Kampung Pancasila
+      <div className="container mx-auto px-4 py-8 flex items-center justify-center flex-1">
+        <Card className="w-full max-w-2xl border-gray-200 shadow-xl rounded-2xl overflow-hidden">
+          <CardHeader className="text-center pb-2">
+            <CardTitle className="text-3xl font-bold mb-2">
+              Daftar Relawan
             </CardTitle>
-            <CardDescription className="text-center">
-              Lengkapi data diri Anda untuk bergabung
+            <CardDescription>
+              Bergabung dengan Kampung Pancasila Surabaya
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
-                <Alert variant="destructive">
+                <Alert variant="destructive" className="bg-red-50 text-red-900 border-red-200">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 
               {success && (
-                <Alert className="border-green-500 text-green-700">
-                  <CheckCircle className="h-4 w-4" />
+                <Alert className="bg-green-50 text-green-900 border-green-200">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
                   <AlertDescription>{success}</AlertDescription>
                 </Alert>
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">
+                  <Label htmlFor="name" className="font-semibold">
                     Nama Lengkap <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -262,11 +231,12 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
                     onChange={(e) => handleChange('name', e.target.value)}
                     required
                     disabled={loading}
+                    className="border-gray-300 focus:border-black focus:ring-black rounded-xl"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="nik">NIK (Opsional)</Label>
+                  <Label htmlFor="nik" className="font-semibold">NIK (Opsional)</Label>
                   <Input
                     id="nik"
                     placeholder="16 digit NIK"
@@ -274,12 +244,13 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
                     value={formData.nik}
                     onChange={(e) => handleChange('nik', e.target.value.replace(/\D/g, ''))}
                     disabled={loading}
+                    className="border-gray-300 focus:border-black focus:ring-black rounded-xl"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">
+                <Label htmlFor="email" className="font-semibold">
                   Email <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -290,6 +261,7 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
                   onChange={(e) => handleChange('email', e.target.value)}
                   required
                   disabled={loading}
+                  className="border-gray-300 focus:border-black focus:ring-black rounded-xl"
                 />
               </div>
 
@@ -306,6 +278,7 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
                     onChange={(e) => handleChange('password', e.target.value)}
                     required
                     disabled={loading}
+                    className="border-gray-300 focus:border-black focus:ring-black rounded-xl"
                   />
                 </div>
 
@@ -321,31 +294,36 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
                     onChange={(e) => handleChange('confirmPassword', e.target.value)}
                     required
                     disabled={loading}
+                    className="border-gray-300 focus:border-black focus:ring-black rounded-xl"
                   />
                 </div>
               </div>
 
-              <div className="border-t pt-4">
-                <h3 className="font-semibold mb-3 text-[#0B6E4F]">Informasi Wilayah</h3>
+              <div className="border-t border-gray-100 pt-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <span className="bg-black text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">!</span>
+                  Informasi Wilayah
+                </h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="kodepos">
+                    <Label htmlFor="kodepos" className="font-semibold">
                       Kode Pos <span className="text-red-500">*</span>
                     </Label>
                     <div className="relative">
                       <Input
                         id="kodepos"
-                        placeholder="60111"
+                        placeholder="60xxx"
                         maxLength={5}
                         value={formData.kodepos}
                         onChange={(e) => handleChange('kodepos', e.target.value.replace(/\D/g, ''))}
                         required
                         disabled={loading}
-                        className={
-                          kodeposValid === true ? 'border-green-500' :
-                          kodeposValid === false ? 'border-red-500' : ''
-                        }
+                        className={`rounded-xl pr-10 ${
+                          kodeposValid === true ? 'border-green-500 focus:border-green-500 focus:ring-green-500' :
+                          kodeposValid === false ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 
+                          'border-gray-300 focus:border-black focus:ring-black'
+                        }`}
                       />
                       {kodeposValid === true && (
                         <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
@@ -355,12 +333,12 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
                       )}
                     </div>
                     {kodeposValid === false && (
-                      <p className="text-xs text-red-500">Kode pos tidak valid untuk Surabaya</p>
+                      <p className="text-xs text-red-500 font-medium">Kode pos tidak valid untuk Surabaya</p>
                     )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="rw">RW (Opsional)</Label>
+                    <Label htmlFor="rw" className="font-semibold">RW (Opsional)</Label>
                     <Input
                       id="rw"
                       placeholder="Contoh: 001"
@@ -368,81 +346,43 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
                       value={formData.rw}
                       onChange={(e) => handleChange('rw', e.target.value.replace(/\D/g, ''))}
                       disabled={loading}
+                      className="border-gray-300 focus:border-black focus:ring-black rounded-xl"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   <div className="space-y-2">
-                    <Label htmlFor="kecamatan">
-                      Kecamatan <span className="text-red-500">*</span>
+                    <Label htmlFor="kecamatan" className="text-gray-500">
+                      Kecamatan (Otomatis)
                     </Label>
                     <Input
                       id="kecamatan"
-                      placeholder="Otomatis terisi"
+                      placeholder="-"
                       value={formData.kecamatan}
                       disabled
-                      className="bg-gray-100"
+                      className="bg-gray-50 border-gray-200 font-medium text-black"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="kelurahan">
-                      Kelurahan <span className="text-red-500">*</span>
+                    <Label htmlFor="kelurahan" className="text-gray-500">
+                      Kelurahan (Otomatis)
                     </Label>
-                    {kelurahanOptions.length > 1 ? (
-                      <Select
-                        value={formData.kelurahan}
-                        onValueChange={(value) => {
-                          const selected = kelurahanOptions.find(
-                            opt => opt.kelurahan.nama === value
-                          );
-                          if (selected) {
-                            setFormData(prev => ({
-                              ...prev,
-                              kelurahan: value,
-                              kecamatan: selected.kecamatan.nama
-                            }));
-                          }
-                        }}
-                        disabled={loading}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih kelurahan..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {kelurahanOptions.map((opt, idx) => (
-                            <SelectItem key={idx} value={opt.kelurahan.nama}>
-                              {opt.kelurahan.nama} ({opt.kecamatan.nama})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
-                        id="kelurahan"
-                        placeholder="Otomatis terisi"
-                        value={formData.kelurahan}
-                        disabled
-                        className="bg-gray-100"
-                      />
-                    )}
+                    <Input
+                      id="kelurahan"
+                      placeholder="-"
+                      value={formData.kelurahan}
+                      disabled
+                      className="bg-gray-50 border-gray-200 font-medium text-black"
+                    />
                   </div>
                 </div>
-
-                <Alert className="mt-4">
-                  <AlertDescription className="text-xs">
-                    💡 <strong>Tips:</strong> Masukkan kode pos wilayah Anda, dan sistem akan otomatis mengisi Kecamatan dan Kelurahan.
-                    {kelurahanOptions.length > 1 && (
-                      <> Kode pos ini memiliki beberapa kelurahan, silakan pilih yang sesuai.</>
-                    )}
-                  </AlertDescription>
-                </Alert>
               </div>
 
               <Button 
                 type="submit" 
-                className="w-full bg-[#FDB913] text-black hover:bg-[#E5A711] text-lg py-6"
+                className="w-full bg-[#FFC107] text-black hover:bg-[#FFD54F] text-lg font-bold h-14 rounded-xl shadow-sm mt-6"
                 disabled={loading || !kodeposValid}
               >
                 {loading ? (
@@ -460,7 +400,7 @@ export function RegisterPage({ onNavigate, onRegister }: RegisterPageProps) {
                 <button
                   type="button"
                   onClick={() => onNavigate('login')}
-                  className="text-[#0B6E4F] font-semibold hover:underline"
+                  className="text-black font-bold hover:underline"
                 >
                   Masuk di sini
                 </button>

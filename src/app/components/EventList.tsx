@@ -18,12 +18,14 @@ export function EventList({ events, authToken, onEventJoined }: EventListProps) 
   const [joiningEventId, setJoiningEventId] = useState<string | null>(null);
 
   const getPillarName = (pillar: number) => {
-    const pillars = ['Lingkungan', 'Gotong Royong', 'Ekonomi Kreatif', 'Keamanan'];
+    // 1: Lingkungan, 2: Ekonomi, 3: Kemasyarakatan, 4: Sosial Budaya
+    const pillars = ['Lingkungan', 'Ekonomi', 'Kemasyarakatan', 'Sosial Budaya'];
     return pillars[pillar - 1] || 'Umum';
   };
 
   const getPillarColor = (pillar: number) => {
-    const colors = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444'];
+    // Colors updated to match main theme logic if needed, but keeping distinct colors for pillars is good.
+    const colors = ['#10B981', '#F59E0B', '#EF4444', '#3B82F6'];
     return colors[pillar - 1] || '#6B7280';
   };
 
@@ -74,17 +76,17 @@ export function EventList({ events, authToken, onEventJoined }: EventListProps) 
     <div className="p-4 space-y-4">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-[#0B6E4F] mb-2">Event Kampung</h2>
-        <p className="text-gray-600">Ikuti kegiatan dan kumpulkan poin</p>
+        <h2 className="text-2xl font-bold text-black mb-2">Event Kampung</h2>
+        <p className="text-gray-500">Ikuti kegiatan dan kumpulkan poin</p>
       </div>
 
       {/* Pillar Filter */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
         <Button
           size="sm"
           variant={selectedPillar === null ? 'default' : 'outline'}
           onClick={() => setSelectedPillar(null)}
-          className={selectedPillar === null ? 'bg-[#0B6E4F]' : ''}
+          className={selectedPillar === null ? 'bg-black text-[#FFC107] font-bold border-black' : 'border-gray-300 text-gray-600'}
         >
           Semua
         </Button>
@@ -179,7 +181,7 @@ export function EventList({ events, authToken, onEventJoined }: EventListProps) 
                   <Button
                     onClick={() => handleJoinEvent(event.id)}
                     disabled={joiningEventId === event.id}
-                    className="w-full bg-[#0B6E4F] hover:bg-[#085A3E]"
+                    className="w-full bg-[#FFC107] text-black hover:bg-[#FFD54F] font-bold"
                   >
                     {joiningEventId === event.id ? (
                       <>

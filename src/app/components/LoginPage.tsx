@@ -5,13 +5,17 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Alert, AlertDescription } from '@/app/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import { ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Loader2, Info } from 'lucide-react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
+import { createClient } from '@supabase/supabase-js';
 
 interface LoginPageProps {
   onNavigate: (page: 'landing' | 'register') => void;
   onLogin: (user: any, token: string) => void;
 }
+
+// Initialize Supabase client
+const supabase = createClient(`https://${projectId}.supabase.co`, publicAnonKey);
 
 export function LoginPage({ onNavigate, onLogin }: LoginPageProps) {
   const [activeTab, setActiveTab] = useState('user');
@@ -20,9 +24,9 @@ export function LoginPage({ onNavigate, onLogin }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
-  // NIK login state
-  const [nik, setNik] = useState('');
-  const [nikPassword, setNikPassword] = useState('');
+  // Admin login state
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -33,7 +37,59 @@ export function LoginPage({ onNavigate, onLogin }: LoginPageProps) {
     setLoading(true);
 
     try {
-      // For MVP, using admin login endpoint with email/password
+      // 1. Sign in with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) throw authError;
+
+      if (!authData.session) throw new Error('Sesi tidak ditemukan');
+
+      // 2. Fetch User Profile from our Server (KV Store)
+      // We use the access token to authenticate with our backend
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/auth/me`,
+        {
+          headers: {
+            'Authorization': `Bearer ${authData.session.access_token}`
+          }
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+         // Fallback if user exists in Auth but not in KV (shouldn't happen with our signup flow but possible)
+         console.warn('Profile fetch failed, using basic auth data');
+         const fallbackUser = {
+            id: authData.user?.id,
+            email: authData.user?.email,
+            name: authData.user?.user_metadata?.name || 'User',
+            role: 'user',
+            points: 0,
+            level: 1
+         };
+         onLogin(fallbackUser, authData.session.access_token);
+         return;
+      }
+
+      onLogin(data.user, authData.session.access_token);
+    } catch (err: any) {
+      console.error('User login error:', err);
+      setError(err.message || 'Email atau password salah');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/auth/admin-login`,
         {
@@ -43,8 +99,8 @@ export function LoginPage({ onNavigate, onLogin }: LoginPageProps) {
             'Authorization': `Bearer ${publicAnonKey}`
           },
           body: JSON.stringify({
-            username: email,
-            password: password
+            username: adminUsername,
+            password: adminPassword
           })
         }
       );
@@ -52,258 +108,212 @@ export function LoginPage({ onNavigate, onLogin }: LoginPageProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login gagal');
+        throw new Error(data.error || 'Login admin gagal');
       }
 
       if (data.success && data.token) {
         onLogin(data.user, data.token);
       } else {
-        setError('Login gagal. Silakan coba lagi.');
+        setError('Login admin gagal. Periksa username dan password.');
       }
     } catch (err: any) {
-      console.error('User login error:', err);
-      setError(err.message || 'Terjadi kesalahan saat login');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleNikLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    // Validate NIK format (16 digits)
-    if (nik.length !== 16 || !/^\d{16}$/.test(nik)) {
-      setError('NIK harus 16 digit angka');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/auth/nik-login`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}`
-          },
-          body: JSON.stringify({
-            nik: nik,
-            password: nikPassword
-          })
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login dengan NIK gagal');
-      }
-
-      if (data.success && data.token) {
-        // Auto-assign role based on NIK database
-        onLogin(data.user, data.token);
-      } else {
-        setError('Login gagal. Periksa NIK dan password Anda.');
-      }
-    } catch (err: any) {
-      console.error('NIK login error:', err);
-      setError(err.message || 'Terjadi kesalahan saat login dengan NIK');
+      console.error('Admin login error:', err);
+      setError(err.message || 'Terjadi kesalahan saat login admin');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="size-full overflow-auto bg-gradient-to-b from-[#0B6E4F] to-[#064835]">
+    <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-[#FFC107] selection:text-black flex flex-col">
       {/* Header */}
-      <header className="bg-white shadow-md">
+      <header className="bg-white border-b border-gray-100">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <button 
             onClick={() => onNavigate('landing')}
-            className="flex items-center gap-2 text-[#0B6E4F] hover:text-[#085A3E]"
+            className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors font-medium"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="font-semibold">Kembali</span>
+            <span>Kembali</span>
           </button>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#0B6E4F] rounded-full flex items-center justify-center">
-              <span className="text-white font-bold">SR</span>
-            </div>
-            <div>
-              <h1 className="font-bold text-lg text-[#0B6E4F]">SIM RELAWAN</h1>
+            <div className="w-10 h-10 bg-black text-[#FFC107] rounded-lg flex items-center justify-center font-bold text-xl">
+              SR
             </div>
           </div>
         </div>
       </header>
 
       {/* Login Form */}
-      <div className="container mx-auto px-4 py-12 flex items-center justify-center min-h-[calc(100vh-80px)]">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-2xl text-center text-[#0B6E4F]">
-              Masuk ke SIMRP
-            </CardTitle>
-            <CardDescription className="text-center">
-              Masuk untuk melanjutkan ke dashboard Anda
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+           <div className="text-center mb-8">
+             <h2 className="text-3xl font-bold mb-2">Selamat Datang Kembali</h2>
+             <p className="text-gray-600">Masuk untuk mengelola kegiatan relawan</p>
+           </div>
+
+           <Card className="border-gray-200 shadow-xl rounded-2xl overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="user">Email</TabsTrigger>
-                <TabsTrigger value="nik">NIK</TabsTrigger>
-              </TabsList>
-
-              {/* User/Relawan Login */}
-              <TabsContent value="user">
-                <form onSubmit={handleUserLogin} className="space-y-4">
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="nama@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-[#0B6E4F] hover:bg-[#085A3E]"
-                    disabled={loading}
+              <div className="bg-gray-50 border-b border-gray-100 p-1">
+                <TabsList className="grid w-full grid-cols-2 bg-transparent h-12">
+                  <TabsTrigger 
+                    value="user"
+                    className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg text-gray-600 data-[state=active]:text-black font-semibold"
                   >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Memuat...
-                      </>
-                    ) : (
-                      'Masuk'
-                    )}
-                  </Button>
-
-                  <div className="text-center text-sm">
-                    Belum punya akun?{' '}
-                    <button
-                      type="button"
-                      onClick={() => onNavigate('register')}
-                      className="text-[#0B6E4F] font-semibold hover:underline"
-                    >
-                      Daftar Sekarang
-                    </button>
-                  </div>
-                </form>
-              </TabsContent>
-
-              {/* NIK Login */}
-              <TabsContent value="nik">
-                <form onSubmit={handleNikLogin} className="space-y-4">
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
-
-                  <Alert className="bg-blue-50 border-blue-200">
-                    <AlertDescription>
-                      <strong>Login dengan NIK:</strong> Gunakan Nomor Induk Kependudukan (NIK) 16 digit Anda. 
-                      Role akan otomatis ditentukan berdasarkan database.
-                    </AlertDescription>
-                  </Alert>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="nik">NIK (16 Digit)</Label>
-                    <Input
-                      id="nik"
-                      type="text"
-                      placeholder="1234567890123456"
-                      value={nik}
-                      onChange={(e) => {
-                        // Only allow numbers and max 16 digits
-                        const value = e.target.value.replace(/\D/g, '').slice(0, 16);
-                        setNik(value);
-                      }}
-                      required
-                      disabled={loading}
-                      maxLength={16}
-                      pattern="\d{16}"
-                      className="font-mono"
-                    />
-                    <p className="text-xs text-gray-500">
-                      {nik.length}/16 digit
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="nik-password">Password</Label>
-                    <Input
-                      id="nik-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={nikPassword}
-                      onChange={(e) => setNikPassword(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-[#0B6E4F] hover:bg-[#085A3E]"
-                    disabled={loading || nik.length !== 16}
+                    Relawan
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="admin"
+                    className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg text-gray-600 data-[state=active]:text-black font-semibold"
                   >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Memuat...
-                      </>
-                    ) : (
-                      'Masuk dengan NIK'
-                    )}
-                  </Button>
+                    Admin
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-                  <div className="text-center text-sm">
-                    Belum punya akun?{' '}
-                    <button
-                      type="button"
-                      onClick={() => onNavigate('register')}
-                      className="text-[#0B6E4F] font-semibold hover:underline"
+              <CardContent className="p-6 md:p-8">
+                {/* User/Relawan Login */}
+                <TabsContent value="user" className="mt-0">
+                  <form onSubmit={handleUserLogin} className="space-y-5">
+                    {error && (
+                      <Alert variant="destructive" className="bg-red-50 text-red-900 border-red-200">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="font-semibold">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="nama@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="h-12 border-gray-300 focus:border-black focus:ring-black rounded-xl"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="h-12 border-gray-300 focus:border-black focus:ring-black rounded-xl"
+                      />
+                    </div>
+                    
+                    <div className="bg-blue-50 p-3 rounded-lg flex items-start gap-3 border border-blue-100">
+                        <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div className="text-sm text-blue-800">
+                           <p className="font-semibold mb-1">Akun Demo:</p>
+                           <p>Email: <code className="bg-blue-100 px-1 rounded">budi@example.com</code></p>
+                           <p>Pass: <code className="bg-blue-100 px-1 rounded">password123</code></p>
+                        </div>
+                    </div>
+
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-black text-white hover:bg-gray-800 h-12 rounded-xl text-lg font-bold"
+                      disabled={loading}
                     >
-                      Daftar Sekarang
-                    </button>
-                  </div>
-                </form>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Memuat...
+                        </>
+                      ) : (
+                        'Masuk'
+                      )}
+                    </Button>
+
+                    <div className="text-center text-sm pt-2">
+                      Belum punya akun?{' '}
+                      <button
+                        type="button"
+                        onClick={() => onNavigate('register')}
+                        className="text-black font-bold hover:underline"
+                      >
+                        Daftar Sekarang
+                      </button>
+                    </div>
+                  </form>
+                </TabsContent>
+
+                {/* Admin Login */}
+                <TabsContent value="admin" className="mt-0">
+                  <form onSubmit={handleAdminLogin} className="space-y-5">
+                    {error && (
+                      <Alert variant="destructive" className="bg-red-50 text-red-900 border-red-200">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <Alert className="bg-[#FFC107]/10 border-[#FFC107] text-black">
+                      <Info className="h-4 w-4 text-black" />
+                      <AlertDescription className="text-sm">
+                        <strong>Akses Admin:</strong><br/>
+                        Username: <code>admin</code><br/>
+                        Password: <code>admin</code>
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-username">Username</Label>
+                      <Input
+                        id="admin-username"
+                        type="text"
+                        placeholder="admin"
+                        value={adminUsername}
+                        onChange={(e) => setAdminUsername(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="h-12 border-gray-300 focus:border-black focus:ring-black rounded-xl"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-password">Password</Label>
+                      <Input
+                        id="admin-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="h-12 border-gray-300 focus:border-black focus:ring-black rounded-xl"
+                      />
+                    </div>
+
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-[#FFC107] text-black hover:bg-[#FFD54F] h-12 rounded-xl text-lg font-bold"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Memuat...
+                        </>
+                      ) : (
+                        'Masuk sebagai Admin'
+                      )}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </CardContent>
+             </Tabs>
+           </Card>
+        </div>
       </div>
     </div>
   );
