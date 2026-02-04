@@ -25,7 +25,7 @@ export function LoginPage({ onNavigate, onLogin }: LoginPageProps) {
   const [password, setPassword] = useState('');
   
   // Admin login state
-  const [adminUsername, setAdminUsername] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   
   const [loading, setLoading] = useState(false);
@@ -99,7 +99,7 @@ export function LoginPage({ onNavigate, onLogin }: LoginPageProps) {
             'Authorization': `Bearer ${publicAnonKey}`
           },
           body: JSON.stringify({
-            username: adminUsername,
+            email: adminEmail,
             password: adminPassword
           })
         }
@@ -108,18 +108,6 @@ export function LoginPage({ onNavigate, onLogin }: LoginPageProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        const allowLocalAdmin = import.meta.env.VITE_ALLOW_LOCAL_ADMIN === 'true';
-        if (allowLocalAdmin) {
-          onLogin(
-            {
-              username: 'admin',
-              role: 'admin',
-              name: 'Administrator'
-            },
-            'admin-local'
-          );
-          return;
-        }
         throw new Error(data.error || 'Login admin gagal');
       }
 
@@ -271,21 +259,20 @@ export function LoginPage({ onNavigate, onLogin }: LoginPageProps) {
 
                     <Alert className="bg-[#FFC107]/10 border-[#FFC107] text-black">
                       <Info className="h-4 w-4 text-black" />
-                      <AlertDescription className="text-sm">
+                    <AlertDescription className="text-sm">
                         <strong>Akses Admin:</strong><br/>
-                        Username: <code>admin</code><br/>
-                        Password: <code>admin</code>
+                        Gunakan akun ASN/Moderator yang terdaftar di Supabase Auth.
                       </AlertDescription>
                     </Alert>
 
                     <div className="space-y-2">
-                      <Label htmlFor="admin-username">Username</Label>
+                      <Label htmlFor="admin-email">Email</Label>
                       <Input
-                        id="admin-username"
-                        type="text"
-                        placeholder="admin"
-                        value={adminUsername}
-                        onChange={(e) => setAdminUsername(e.target.value)}
+                        id="admin-email"
+                        type="email"
+                        placeholder="nama@instansi.go.id"
+                        value={adminEmail}
+                        onChange={(e) => setAdminEmail(e.target.value)}
                         required
                         disabled={loading}
                         className="h-12 border-gray-300 focus:border-black focus:ring-black rounded-xl"
@@ -293,7 +280,7 @@ export function LoginPage({ onNavigate, onLogin }: LoginPageProps) {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="admin-password">Password</Label>
+                    <Label htmlFor="admin-password">Password</Label>
                       <Input
                         id="admin-password"
                         type="password"

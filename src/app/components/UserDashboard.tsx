@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, User, TrendingUp, MapPin, Crown, Users } from 'lucide-react';
+import { Calendar, TrendingUp, MapPin, Crown, Users, Home, User as UserIcon } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { Input } from '@/app/components/ui/input';
@@ -32,7 +32,7 @@ export function UserDashboard({
   moderatorTier,
   onModeratorTierChange
 }: UserDashboardProps) {
-  const [activePage, setActivePage] = useState<'home' | 'events' | 'report' | 'profile' | 'more'>('home');
+  const [activePage, setActivePage] = useState<'home' | 'events' | 'report' | 'profile'>('home');
   const [events, setEvents] = useState<any[]>([]);
   const [userMode, setUserMode] = useState<'relawan' | 'ksh'>(user?.isKsh ? 'ksh' : 'relawan');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -43,17 +43,27 @@ export function UserDashboard({
     pillar: '1',
     date: '',
     time: '',
-    location: ''
+    location: '',
+    quota: 0,
+    recommendationId: ''
   });
+  const [reports, setReports] = useState<any[]>([]);
+  const [kampungLeaderboard, setKampungLeaderboard] = useState<any[]>([]);
+  const [rekomendasi, setRekomendasi] = useState<any[]>([]);
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+    fetchReports();
+    fetchKampungLeaderboard();
+    fetchRecommendations();
+  }, [userMode]);
 
   const fetchEvents = async () => {
     try {
+      const status = userMode === 'relawan' ? 'published' : undefined;
+      const query = status ? `?status=${status}` : '';
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/events`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/events${query}`,
         {
           headers: {
             'Authorization': `Bearer ${authToken || publicAnonKey}`
@@ -64,14 +74,68 @@ export function UserDashboard({
       if (response.ok) {
         const data = await response.json();
         setEvents(data.events || []);
-      } else {
-        const allowLocalAdmin = import.meta.env.VITE_ALLOW_LOCAL_ADMIN === 'true';
-        if (response.status === 401 && allowLocalAdmin) {
-          setEvents([]);
-        }
       }
     } catch (error) {
       console.error('Error fetching events:', error);
+    }
+  };
+
+  const fetchReports = async () => {
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/reports?userId=${user?.id}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${authToken || publicAnonKey}`
+          }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setReports(data.reports || []);
+      }
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+    }
+  };
+
+  const fetchKampungLeaderboard = async () => {
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/kampung`,
+        {
+          headers: {
+            'Authorization': `Bearer ${authToken || publicAnonKey}`
+          }
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setKampungLeaderboard(data.kampung || []);
+      }
+    } catch (error) {
+      console.error('Error fetching kampung leaderboard:', error);
+    }
+  };
+
+  const fetchRecommendations = async () => {
+    try {
+      const kampungId = user?.kampungId ? `?kampungId=${user.kampungId}` : '';
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/recommendations${kampungId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${authToken || publicAnonKey}`
+          }
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setRekomendasi(data.recommendations || []);
+      }
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
     }
   };
 
@@ -98,7 +162,9 @@ export function UserDashboard({
             date: newEvent.date,
             time: newEvent.time,
             location: newEvent.location,
-            organizer: user?.name || 'KSH'
+            organizer: user?.name || 'KSH',
+            quota: newEvent.quota,
+            recommendationId: newEvent.recommendationId || null
           })
         }
       );
@@ -116,7 +182,9 @@ export function UserDashboard({
         pillar: '1',
         date: '',
         time: '',
-        location: ''
+        location: '',
+        quota: 0,
+        recommendationId: ''
       });
       fetchEvents();
     } catch (error: any) {
@@ -126,12 +194,39 @@ export function UserDashboard({
     }
   };
 
+  const handleCompleteEvent = async (eventId: string) => {
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/events/${eventId}/complete`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken || publicAnonKey}`
+          }
+        }
+      );
+      if (response.ok) {
+        toast.success('Event ditandai selesai');
+        fetchEvents();
+      } else {
+        toast.error('Gagal menandai event selesai');
+      }
+    } catch (error) {
+      console.error('Error completing event:', error);
+      toast.error('Terjadi kesalahan');
+    }
+  };
+
   const kampungName = user?.kampung?.name || user?.kampungName || user?.kelurahan || 'Belum Terdata';
   const kampungXp = user?.kampung?.xp ?? 0;
   const kampungRelawan = user?.kampung?.volunteers ?? 0;
-  const kampungLeaderboard = user?.kampungLeaderboard || [];
   const kampungDibantu = user?.kampungDibantu || [];
   const kampungPernahBantu = user?.kampungPernahBantu || [];
+  const pendingReport = user?.hasPendingReport || reports.some((r: any) => r.status === 'pending');
+  const upcomingEvents = events.filter((event) => event.status === 'published');
+  const draftEvents = events.filter((event) => event.status === 'draft');
+  const completedEvents = events.filter((event) => event.status === 'completed');
 
   return (
     <div className="size-full flex flex-col bg-white">
@@ -147,6 +242,12 @@ export function UserDashboard({
         moderatorTier={moderatorTier}
         onModeratorTierChange={onModeratorTierChange}
         theme="user"
+        navItems={[
+          { key: 'home', label: 'Home', icon: Home },
+          { key: 'events', label: 'Event', icon: Calendar },
+          ...(userMode === 'ksh' ? [] : [{ key: 'report', label: 'Lapor', icon: TrendingUp }]),
+          { key: 'profile', label: 'Profil', icon: UserIcon }
+        ]}
       />
 
       {/* Content Area */}
@@ -276,6 +377,23 @@ export function UserDashboard({
                     )}
                   </CardContent>
                 </Card>
+
+                {rekomendasi.length > 0 && (
+                  <Card className="border border-yellow-100">
+                    <CardHeader>
+                      <CardTitle className="text-lg text-yellow-700">Rekomendasi ASN</CardTitle>
+                      <CardDescription>Rekomendasi terbaru untuk kampungmu.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {rekomendasi.slice(0, 3).map((item: any) => (
+                        <div key={item.id} className="p-3 rounded-xl bg-yellow-50">
+                          <div className="font-semibold text-sm">{item.title}</div>
+                          <div className="text-xs text-gray-600 mt-1">{item.summary || 'Belum ada ringkasan.'}</div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
           </div>
@@ -295,132 +413,109 @@ export function UserDashboard({
                 </Button>
               )}
             </div>
+
+            {pendingReport && userMode !== 'ksh' && (
+              <Card className="border-yellow-200 bg-yellow-50">
+                <CardContent className="py-3 text-sm text-yellow-800">
+                  Selesaikan laporan kegiatan sebelumnya sebelum mendaftar event baru.
+                </CardContent>
+              </Card>
+            )}
+
             <EventList 
-              events={events}
+              events={userMode === 'ksh' ? events : upcomingEvents}
               authToken={authToken}
               onEventJoined={fetchEvents}
+              canJoin={!pendingReport && userMode !== 'ksh'}
             />
+
+            {userMode === 'ksh' && (
+              <div className="space-y-3">
+                <Card className="border-green-100">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Draft Kegiatan</CardTitle>
+                    <CardDescription>Menunggu verifikasi moderator kelurahan.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {draftEvents.length === 0 ? (
+                      <p className="text-sm text-gray-500">Tidak ada draft.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {draftEvents.map((event) => (
+                          <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                              <div className="font-semibold text-sm">{event.title}</div>
+                              <div className="text-xs text-gray-500">{event.date}</div>
+                            </div>
+                            <Badge className="bg-yellow-400 text-black">Draft</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-green-100">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Kegiatan Selesai</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {completedEvents.length === 0 ? (
+                      <p className="text-sm text-gray-500">Belum ada kegiatan selesai.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {completedEvents.map((event) => (
+                          <div key={event.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                            <div>
+                              <div className="font-semibold text-sm">{event.title}</div>
+                              <div className="text-xs text-gray-500">{event.date}</div>
+                            </div>
+                            <Badge className="bg-green-600 text-white">Selesai</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-green-100">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Kegiatan Terpublish</CardTitle>
+                    <CardDescription>Mark kegiatan selesai setelah aktivitas berlangsung.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {upcomingEvents.length === 0 ? (
+                      <p className="text-sm text-gray-500">Belum ada kegiatan terpublish.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {upcomingEvents.map((event) => (
+                          <div key={event.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                            <div>
+                              <div className="font-semibold text-sm">{event.title}</div>
+                              <div className="text-xs text-gray-500">{event.date}</div>
+                            </div>
+                            <Button
+                              size="sm"
+                              className="bg-green-700 text-white hover:bg-green-800"
+                              onClick={() => handleCompleteEvent(event.id)}
+                            >
+                              Tandai Selesai
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         )}
 
         {/* Profile Tab */}
         {activePage === 'profile' && (
           <div className="pt-2">
-             <UserProfile user={user} />
-          </div>
-        )}
-
-        {/* More Tab */}
-        {activePage === 'more' && (
-          <div className="pt-2 space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Menu Lainnya</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start h-12 text-base"
-                  onClick={() => setActivePage('profile')}
-                >
-                  <User className="w-5 h-5 mr-3" />
-                  Profil Lengkap
-                </Button>
-                
-              </CardContent>
-            </Card>
-
-            {user?.role === 'admin' && (
-              <Card className="border border-gray-200">
-                <CardHeader>
-                  <CardTitle>Admin Mode (Preview)</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase text-gray-400 mb-2">Kategori User</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        size="sm"
-                        variant={currentView === 'user' && userMode === 'relawan' ? 'default' : 'outline'}
-                        onClick={() => {
-                          setUserMode('relawan');
-                          onViewChange('user');
-                        }}
-                        className={currentView === 'user' && userMode === 'relawan' ? 'bg-green-700 text-white' : ''}
-                      >
-                        Relawan
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={currentView === 'user' && userMode === 'ksh' ? 'default' : 'outline'}
-                        onClick={() => {
-                          setUserMode('ksh');
-                          onViewChange('user');
-                        }}
-                        className={currentView === 'user' && userMode === 'ksh' ? 'bg-yellow-400 text-black' : ''}
-                      >
-                        KSH
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold uppercase text-gray-400 mb-2">Moderator Tier</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[1, 2, 3].map((tier) => (
-                        <Button
-                          key={tier}
-                          size="sm"
-                          variant={currentView === 'moderator' && moderatorTier === tier ? 'default' : 'outline'}
-                          onClick={() => {
-                            onModeratorTierChange(tier as 1 | 2 | 3);
-                            onViewChange('moderator');
-                          }}
-                          className={currentView === 'moderator' && moderatorTier === tier ? 'bg-cyan-600 text-white' : ''}
-                        >
-                          Tier {tier}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold uppercase text-gray-400 mb-2">Admin</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        size="sm"
-                        variant={currentView === 'user' ? 'default' : 'outline'}
-                        onClick={() => onViewChange('user')}
-                        className={currentView === 'user' ? 'bg-green-700 text-white' : ''}
-                      >
-                        User View
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={currentView === 'admin' ? 'default' : 'outline'}
-                        onClick={() => onViewChange('admin')}
-                        className={currentView === 'admin' ? 'bg-black text-white' : ''}
-                      >
-                        Admin View
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            
-            <Button 
-              variant="destructive" 
-              className="w-full h-12"
-              onClick={onLogout}
-            >
-              Keluar Aplikasi
-            </Button>
-
-            <div className="text-center text-xs text-gray-400 mt-8">
-              <p>SIM Relawan Kampung Pancasila v2.0</p>
-              <p>Diskominfo Kota Surabaya</p>
-            </div>
+             <UserProfile user={user} reports={reports} />
           </div>
         )}
       </div>
@@ -448,47 +543,73 @@ export function UserDashboard({
                 rows={3}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-semibold">Pilar</label>
-                <select
-                  className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
-                  value={newEvent.pillar}
-                  onChange={(e) => setNewEvent(prev => ({ ...prev, pillar: e.target.value }))}
-                >
-                  <option value="1">Lingkungan</option>
-                  <option value="2">Ekonomi</option>
-                  <option value="3">Kemasyarakatan</option>
-                  <option value="4">Sosial Budaya</option>
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-semibold">Pilar</label>
+                  <select
+                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                    value={newEvent.pillar}
+                    onChange={(e) => setNewEvent(prev => ({ ...prev, pillar: e.target.value }))}
+                  >
+                    <option value="1">Lingkungan</option>
+                    <option value="2">Ekonomi</option>
+                    <option value="3">Kemasyarakatan</option>
+                    <option value="4">Sosial Budaya</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">Tanggal</label>
+                  <Input
+                    type="date"
+                    value={newEvent.date}
+                    onChange={(e) => setNewEvent(prev => ({ ...prev, date: e.target.value }))}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-semibold">Tanggal</label>
-                <Input
-                  type="date"
-                  value={newEvent.date}
-                  onChange={(e) => setNewEvent(prev => ({ ...prev, date: e.target.value }))}
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-semibold">Waktu</label>
+                  <Input
+                    type="time"
+                    value={newEvent.time}
+                    onChange={(e) => setNewEvent(prev => ({ ...prev, time: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">Lokasi</label>
+                  <Input
+                    value={newEvent.location}
+                    onChange={(e) => setNewEvent(prev => ({ ...prev, location: e.target.value }))}
+                    placeholder="Balai RW / Lapangan"
+                  />
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-semibold">Waktu</label>
-                <Input
-                  type="time"
-                  value={newEvent.time}
-                  onChange={(e) => setNewEvent(prev => ({ ...prev, time: e.target.value }))}
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-semibold">Kuota Relawan</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={newEvent.quota}
+                    onChange={(e) => setNewEvent(prev => ({ ...prev, quota: parseInt(e.target.value || '0', 10) }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">Rekomendasi ASN</label>
+                  <select
+                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                    value={newEvent.recommendationId}
+                    onChange={(e) => setNewEvent(prev => ({ ...prev, recommendationId: e.target.value }))}
+                  >
+                    <option value="">Tidak ada</option>
+                    {rekomendasi.map((item: any) => (
+                      <option key={item.id} value={item.id}>
+                        {item.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-semibold">Lokasi</label>
-                <Input
-                  value={newEvent.location}
-                  onChange={(e) => setNewEvent(prev => ({ ...prev, location: e.target.value }))}
-                  placeholder="Balai RW / Lapangan"
-                />
-              </div>
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
@@ -506,16 +627,18 @@ export function UserDashboard({
       </Dialog>
 
       {/* Reporting Wizard Modal */}
-      {activePage === 'report' && (
-        <ReportingWizard
-          authToken={authToken}
-          userId={user?.id}
-          onClose={() => {
-            setActivePage('home');
-            fetchEvents();
-          }}
-        />
-      )}
-    </div>
+        {activePage === 'report' && (
+          <ReportingWizard
+            authToken={authToken}
+            userId={user?.id}
+            events={events.filter((event) => event.status === 'completed')}
+            onClose={() => {
+              setActivePage('home');
+              fetchEvents();
+              fetchReports();
+            }}
+          />
+        )}
+      </div>
   );
 }

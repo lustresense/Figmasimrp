@@ -85,9 +85,16 @@ export function UserProfile({ user, reports = [] }: UserProfileProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {user.badges && user.badges.length > 0 ? (
+          {(user.isKsh || (user.badges && user.badges.length > 0)) ? (
             <div className="grid grid-cols-2 gap-3">
-              {user.badges.map((badge: any, idx: number) => (
+              {user.isKsh && (
+                <div className="bg-gradient-to-br from-yellow-300 to-yellow-500 p-4 rounded-lg text-center text-black">
+                  <div className="text-3xl mb-2">✅</div>
+                  <div className="font-bold text-sm">KSH Verified</div>
+                  <div className="text-xs text-black/70 mt-1">Badge Kader Surabaya Hebat</div>
+                </div>
+              )}
+              {(user.badges || []).map((badge: any, idx: number) => (
                 <div key={idx} className="bg-gradient-to-br from-[#FDB913] to-[#F59E0B] p-4 rounded-lg text-center">
                   <div className="text-3xl mb-2">🏆</div>
                   <div className="font-bold text-sm text-black">

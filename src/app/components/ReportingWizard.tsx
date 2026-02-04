@@ -11,10 +11,11 @@ import { toast } from 'sonner';
 interface ReportingWizardProps {
   authToken: string | null;
   userId: string;
+  events: any[];
   onClose: () => void;
 }
 
-export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardProps) {
+export function ReportingWizard({ authToken, userId, events, onClose }: ReportingWizardProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
@@ -25,6 +26,7 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
   
   // Step 2: Outcome
   const [outcomeTags, setOutcomeTags] = useState<string[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -60,6 +62,11 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
   };
 
   const handleSubmit = async () => {
+    if (!selectedEventId) {
+      toast.error('Pilih kegiatan terlebih dahulu');
+      return;
+    }
+
     if (!photo) {
       toast.error('Foto wajib diupload');
       return;
@@ -75,6 +82,7 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
     try {
       const reportData = {
         userId,
+        eventId: selectedEventId,
         photoUrl: photo, // In production, upload to cloud storage first
         participants: parseInt(participants),
         outcomeTags,
@@ -109,6 +117,30 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
     }
   };
 
+  if (events.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-lg">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-xl text-black">Lapor Kegiatan</CardTitle>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-black transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm text-gray-600">
+            <p>Belum ada kegiatan selesai yang bisa dilaporkan.</p>
+            <Button className="w-full" onClick={onClose}>
+              Kembali
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-lg max-h-[90vh] overflow-auto">
@@ -139,6 +171,21 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
                 <h3 className="font-bold mb-3 text-lg text-black">📸 Bukti Kegiatan</h3>
                 
                 <div className="space-y-4">
+                  <div>
+                    <Label className="text-black font-semibold">Pilih Event</Label>
+                    <select
+                      className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm"
+                      value={selectedEventId}
+                      onChange={(e) => setSelectedEventId(e.target.value)}
+                    >
+                      <option value="">Pilih kegiatan</option>
+                      {events.map((event) => (
+                        <option key={event.id} value={event.id}>
+                          {event.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   {/* Photo Upload */}
                   <div>
                     <Label className="text-black font-semibold">Foto Kegiatan (Wajib)</Label>
@@ -208,7 +255,7 @@ export function ReportingWizard({ authToken, userId, onClose }: ReportingWizardP
 
               <Button
                 onClick={() => setStep(2)}
-                disabled={!photo || !participants}
+                disabled={!photo || !participants || !selectedEventId}
                 className="w-full bg-green-700 text-white hover:bg-green-800 font-bold h-12 rounded-xl"
               >
                 Lanjut ke Step 2
