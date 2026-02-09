@@ -11,9 +11,10 @@ interface EventListProps {
   events: any[];
   authToken: string | null;
   onEventJoined: () => void;
+  canJoin?: boolean;
 }
 
-export function EventList({ events, authToken, onEventJoined }: EventListProps) {
+export function EventList({ events, authToken, onEventJoined, canJoin = true }: EventListProps) {
   const [selectedPillar, setSelectedPillar] = useState<number | null>(null);
   const [joiningEventId, setJoiningEventId] = useState<string | null>(null);
 
@@ -69,7 +70,7 @@ export function EventList({ events, authToken, onEventJoined }: EventListProps) 
     ? events.filter(e => e.pillar === selectedPillar)
     : events;
 
-  const upcomingEvents = filteredEvents.filter(e => e.status === 'upcoming');
+  const upcomingEvents = filteredEvents.filter(e => e.status === 'published');
   const completedEvents = filteredEvents.filter(e => e.status === 'completed');
 
   return (
@@ -170,28 +171,33 @@ export function EventList({ events, authToken, onEventJoined }: EventListProps) 
                       </div>
                     )}
                     
-                    {event.participants && (
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Users className="w-4 h-4" />
-                        <span>{event.participants.length} peserta terdaftar</span>
-                      </div>
-                    )}
+                     {event.participants && (
+                       <div className="flex items-center gap-2 text-gray-600">
+                         <Users className="w-4 h-4" />
+                         <span>
+                           {event.participants.length} peserta
+                           {event.quota ? ` / ${event.quota}` : ''}
+                         </span>
+                       </div>
+                     )}
                   </div>
 
-                  <Button
-                    onClick={() => handleJoinEvent(event.id)}
-                    disabled={joiningEventId === event.id}
-                    className="w-full bg-[#FFC107] text-black hover:bg-[#FFD54F] font-bold"
-                  >
-                    {joiningEventId === event.id ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Bergabung...
-                      </>
-                    ) : (
-                      'Gabung Event'
-                    )}
-                  </Button>
+                   <Button
+                     onClick={() => handleJoinEvent(event.id)}
+                     disabled={joiningEventId === event.id || !canJoin || (event.quota > 0 && event.participants?.length >= event.quota)}
+                     className="w-full bg-[#FFC107] text-black hover:bg-[#FFD54F] font-bold"
+                   >
+                     {event.quota > 0 && event.participants?.length >= event.quota
+                       ? 'Full'
+                       : joiningEventId === event.id ? (
+                         <>
+                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                           Bergabung...
+                         </>
+                       ) : (
+                         'Gabung Event'
+                       )}
+                   </Button>
                 </CardContent>
               </Card>
             ))

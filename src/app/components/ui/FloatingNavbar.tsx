@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Home, Calendar, TrendingUp, User as UserIcon, Menu, X, LogOut, BadgeCheck } from 'lucide-react';
+import { Home, Calendar, User as UserIcon, Menu, X, LogOut, BadgeCheck } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 
@@ -56,7 +56,6 @@ export function FloatingNavbar({
   const items = navItems || [
     { key: 'home', label: 'Home', icon: Home },
     { key: 'events', label: 'Event', icon: Calendar },
-    { key: 'report', label: 'Lapor', icon: TrendingUp },
     { key: 'profile', label: 'Profil', icon: UserIcon }
   ];
 
@@ -206,16 +205,6 @@ export function FloatingNavbar({
                   </div>
                 </div>
               )}
-              <button
-                onClick={() => {
-                  onNavigate('more');
-                  setIsMenuOpen(false);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-colors"
-              >
-                <Menu className="w-4 h-4" />
-                Menu Lainnya
-              </button>
               <button 
                 onClick={() => {
                   onNavigate('profile');

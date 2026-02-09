@@ -58,6 +58,75 @@ const verifyUser = async (authHeader: string | null) => {
   return { error: null, userId: data.user.id };
 };
 
+const getUserProfile = async (userId: string) => {
+  if (!userId) return null;
+  return await kv.get(`user:${userId}`);
+};
+
+const getUserFromAuth = async (authHeader: string | null) => {
+  const { error, userId } = await verifyUser(authHeader);
+  if (error || !userId) {
+    return { error: error || 'Unauthorized', user: null };
+  }
+  const user = await getUserProfile(userId);
+  if (!user) {
+    return { error: 'User not found', user: null };
+  }
+  return { error: null, user };
+};
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+
+const getKampungId = (kelurahan: string, kecamatan: string) =>
+  `kampung-${slugify(kelurahan)}-${slugify(kecamatan)}`;
+
+const ensureKampung = async ({
+  kelurahan,
+  kecamatan,
+  kodepos
+}: {
+  kelurahan: string;
+  kecamatan: string;
+  kodepos: string;
+}) => {
+  const kampungId = getKampungId(kelurahan, kecamatan);
+  const existing = await kv.get(`kampung:${kampungId}`);
+  const now = new Date().toISOString();
+  if (existing) {
+    const updated = {
+      ...existing,
+      kelurahan,
+      kecamatan,
+      kodepos: existing.kodepos || kodepos,
+      updatedAt: now
+    };
+    await kv.set(`kampung:${kampungId}`, updated);
+    return updated;
+  }
+  const kampung = {
+    id: kampungId,
+    name: `Kampung Pancasila ${kelurahan}`,
+    kelurahan,
+    kecamatan,
+    kodepos,
+    xp: 0,
+    volunteers: 0,
+    createdAt: now,
+    updatedAt: now
+  };
+  await kv.set(`kampung:${kampungId}`, kampung);
+  return kampung;
+};
+
+const isModeratorTier = (user: any, tier: number) =>
+  user?.role === 'moderator' && Number(user?.moderatorTier) === tier;
+
 // ==================== AUTHENTICATION ROUTES ====================
 
 // Sign up endpoint - Admin creates user with auto-confirm
@@ -70,24 +139,24 @@ app.post("/make-server-32aa5c5c/auth/signup", async (c) => {
       return c.json({ error: 'Email, password, and name are required' }, 400);
     }
 
-    const supabase = getSupabaseAdmin();
+    const supabase = getSupabaseAuth();
 
-    // Create user with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
-      email_confirm: true, // Auto-confirm email since email server not configured
-      user_metadata: {
-        name,
-        nik: nik || '',
-        kecamatan: kecamatan || '',
-        kelurahan: kelurahan || '',
-        kodepos: kodepos || '',
-        rw: rw || '',
-        role: 'user',
-        level: 1,
-        points: 0,
-        badges: []
+      options: {
+        data: {
+          name,
+          nik: nik || '',
+          kecamatan: kecamatan || '',
+          kelurahan: kelurahan || '',
+          kodepos: kodepos || '',
+          rw: rw || '',
+          role: 'user',
+          level: 1,
+          points: 0,
+          badges: []
+        }
       }
     });
 
@@ -95,6 +164,16 @@ app.post("/make-server-32aa5c5c/auth/signup", async (c) => {
       console.log(`Sign up error: ${authError.message}`);
       return c.json({ error: `Failed to create user: ${authError.message}` }, 400);
     }
+
+    const kampung = await ensureKampung({
+      kelurahan: kelurahan || '',
+      kecamatan: kecamatan || '',
+      kodepos: kodepos || ''
+    });
+
+    kampung.volunteers = (kampung.volunteers || 0) + 1;
+    kampung.updatedAt = new Date().toISOString();
+    await kv.set(`kampung:${kampung.id}`, kampung);
 
     // Store user profile in KV store
     await kv.set(`user:${authData.user.id}`, {
@@ -107,6 +186,12 @@ app.post("/make-server-32aa5c5c/auth/signup", async (c) => {
       kodepos: kodepos || '',
       rw: rw || '',
       role: 'user',
+      isKsh: false,
+      moderatorTier: null,
+      hasPendingReport: false,
+      pendingReportEventIds: [],
+      kampungId: kampung.id,
+      kampung,
       level: 1,
       levelName: 'Pendatang Baru',
       points: 0,
@@ -130,36 +215,37 @@ app.post("/make-server-32aa5c5c/auth/signup", async (c) => {
   }
 });
 
-// Admin login endpoint (bypass Internet Identity)
+// Admin login endpoint (Supabase Auth)
 app.post("/make-server-32aa5c5c/auth/admin-login", async (c) => {
   try {
     const body = await c.req.json();
-    const { username, password } = body;
+    const { email, password } = body;
 
-    // Simple admin check (in production, use proper credential verification)
-    if (username === 'admin' && password === 'admin') {
-      // Generate a simple admin session token
-      const adminToken = `admin-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Store admin session
-      await kv.set(`session:admin:${adminToken}`, {
-        username: 'admin',
-        role: 'admin',
-        createdAt: new Date().toISOString()
-      });
-
-      return c.json({
-        success: true,
-        token: adminToken,
-        user: {
-          username: 'admin',
-          role: 'admin',
-          name: 'Administrator'
-        }
-      });
+    if (!email || !password) {
+      return c.json({ error: 'Email dan password wajib diisi' }, 400);
     }
 
-    return c.json({ error: 'Invalid credentials' }, 401);
+    const supabase = getSupabaseAuth();
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError || !authData.session || !authData.user) {
+      return c.json({ error: authError?.message || 'Login gagal' }, 401);
+    }
+
+    const user = await kv.get(`user:${authData.user.id}`);
+
+    if (!user || (user.role !== 'admin' && user.role !== 'moderator')) {
+      return c.json({ error: 'Akun tidak memiliki akses admin/moderator' }, 403);
+    }
+
+    return c.json({
+      success: true,
+      token: authData.session.access_token,
+      user
+    });
   } catch (error) {
     console.error('Admin login error:', error);
     return c.json({ error: 'Internal server error during admin login' }, 500);
@@ -170,22 +256,6 @@ app.post("/make-server-32aa5c5c/auth/admin-login", async (c) => {
 app.get("/make-server-32aa5c5c/auth/me", async (c) => {
   const authHeader = c.req.header('Authorization');
   
-  // Check if it's admin token
-  if (authHeader?.startsWith('Bearer admin-')) {
-    const token = authHeader.split(' ')[1];
-    const session = await kv.get(`session:admin:${token}`);
-    
-    if (session) {
-      return c.json({
-        user: {
-          username: 'admin',
-          role: 'admin',
-          name: 'Administrator'
-        }
-      });
-    }
-  }
-
   // Regular user auth
   const { error, userId } = await verifyUser(authHeader);
   
@@ -207,7 +277,18 @@ app.get("/make-server-32aa5c5c/auth/me", async (c) => {
 // Get all users (Admin only)
 app.get("/make-server-32aa5c5c/users", async (c) => {
   try {
-    const users = await kv.getByPrefix('user:');
+    const kampungId = c.req.query('kampungId');
+    const role = c.req.query('role');
+    let users = await kv.getByPrefix('user:');
+
+    if (kampungId) {
+      users = users.filter((u: any) => u.kampungId === kampungId);
+    }
+
+    if (role) {
+      users = users.filter((u: any) => u.role === role);
+    }
+
     return c.json({ users });
   } catch (error) {
     console.error('Get users error:', error);
@@ -237,11 +318,15 @@ app.put("/make-server-32aa5c5c/users/:id", async (c) => {
   try {
     const id = c.req.param('id');
     const authHeader = c.req.header('Authorization');
-    const { error, userId } = await verifyUser(authHeader);
+    const { error, user } = await getUserFromAuth(authHeader);
+
+    if (error || !user) {
+      return c.json({ error: error || 'Unauthorized' }, 401);
+    }
 
     // Allow if user is updating their own profile or if admin
-    const isAdmin = authHeader?.startsWith('Bearer admin-');
-    if (!isAdmin && userId !== id) {
+    const isAdmin = user.role === 'admin';
+    if (!isAdmin && user.id !== id) {
       return c.json({ error: 'Unauthorized to update this user' }, 403);
     }
 
@@ -290,27 +375,49 @@ app.get("/make-server-32aa5c5c/kodepos/:kode", async (c) => {
   }
 });
 
+// Get all kampung entries
+app.get("/make-server-32aa5c5c/kampung", async (c) => {
+  try {
+    const kampung = await kv.getByPrefix('kampung:');
+    kampung.sort((a: any, b: any) => (b.xp || 0) - (a.xp || 0));
+    return c.json({ kampung });
+  } catch (error) {
+    console.error('Get kampung error:', error);
+    return c.json({ error: 'Failed to fetch kampung' }, 500);
+  }
+});
+
 // ==================== EVENT MANAGEMENT ROUTES ====================
 
 // Create event
 app.post("/make-server-32aa5c5c/events", async (c) => {
   try {
     const authHeader = c.req.header('Authorization');
-    const { error, userId } = await verifyUser(authHeader);
+    const { error, user } = await getUserFromAuth(authHeader);
 
-    if (error) {
-      return c.json({ error }, 401);
+    if (error || !user) {
+      return c.json({ error: error || 'Unauthorized' }, 401);
+    }
+
+    if (!user.isKsh) {
+      return c.json({ error: 'Hanya KSH yang dapat membuat event' }, 403);
     }
 
     const body = await c.req.json();
-    const { title, description, pillar, date, time, location, basePoints, participants, organizer } = body;
+    const { title, description, pillar, date, time, location, basePoints, organizer, quota, recommendationId } = body;
 
     if (!title || !pillar || !date) {
       return c.json({ error: 'Title, pillar, and date are required' }, 400);
     }
 
     const eventId = `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
+    const kampung = await ensureKampung({
+      kelurahan: user.kelurahan || '',
+      kecamatan: user.kecamatan || '',
+      kodepos: user.kodepos || ''
+    });
+
     const event = {
       id: eventId,
       title,
@@ -320,13 +427,27 @@ app.post("/make-server-32aa5c5c/events", async (c) => {
       time: time || '',
       location: location || '',
       basePoints: basePoints || 10,
-      participants: participants || [],
-      organizer: organizer || '',
-      createdBy: userId,
-      status: 'upcoming',
+      participants: [],
+      organizer: organizer || user.name || '',
+      createdBy: user.id,
+      kampungId: kampung.id,
+      kelurahan: user.kelurahan || '',
+      kecamatan: user.kecamatan || '',
+      kodepos: user.kodepos || '',
+      quota: typeof quota === 'number' ? quota : parseInt(quota || '0', 10) || 0,
+      recommendationId: recommendationId || null,
+      status: 'draft',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
+
+    if (recommendationId) {
+      const bonusXp = 25;
+      kampung.xp = (kampung.xp || 0) + bonusXp;
+      kampung.updatedAt = new Date().toISOString();
+      await kv.set(`kampung:${kampung.id}`, kampung);
+      event.bonusXp = bonusXp;
+    }
 
     await kv.set(`event:${eventId}`, event);
 
@@ -342,6 +463,9 @@ app.get("/make-server-32aa5c5c/events", async (c) => {
   try {
     const pillar = c.req.query('pillar');
     const status = c.req.query('status');
+    const kampungId = c.req.query('kampungId');
+    const createdBy = c.req.query('createdBy');
+    const participantId = c.req.query('participantId');
     
     let events = await kv.getByPrefix('event:');
     
@@ -353,6 +477,18 @@ app.get("/make-server-32aa5c5c/events", async (c) => {
     // Filter by status if specified
     if (status) {
       events = events.filter((e: any) => e.status === status);
+    }
+
+    if (kampungId) {
+      events = events.filter((e: any) => e.kampungId === kampungId);
+    }
+
+    if (createdBy) {
+      events = events.filter((e: any) => e.createdBy === createdBy);
+    }
+
+    if (participantId) {
+      events = events.filter((e: any) => Array.isArray(e.participants) && e.participants.includes(participantId));
     }
     
     // Sort by date
@@ -382,15 +518,164 @@ app.get("/make-server-32aa5c5c/events/:id", async (c) => {
   }
 });
 
+// Update event status (Moderator Tier 2 approval)
+app.post("/make-server-32aa5c5c/events/:id/approval", async (c) => {
+  try {
+    const id = c.req.param('id');
+    const authHeader = c.req.header('Authorization');
+    const body = await c.req.json();
+    const { approved, notes } = body;
+
+    const { error, user } = await getUserFromAuth(authHeader);
+    if (error || !user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    if (!(user.role === 'admin' || isModeratorTier(user, 2))) {
+      return c.json({ error: 'Hanya moderator tier 2 yang dapat approve event' }, 403);
+    }
+
+    const event = await kv.get(`event:${id}`);
+    if (!event) {
+      return c.json({ error: 'Event not found' }, 404);
+    }
+
+    event.status = approved ? 'published' : 'rejected';
+    event.approvedAt = approved ? new Date().toISOString() : null;
+    event.approvedBy = user.id;
+    event.approvalNotes = notes || '';
+    event.updatedAt = new Date().toISOString();
+
+    await kv.set(`event:${id}`, event);
+
+    const approvalId = `approval-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    await kv.set(`approval:${approvalId}`, {
+      id: approvalId,
+      eventId: id,
+      approved,
+      notes: notes || '',
+      moderatorId: user.id,
+      moderatorName: user.name || '',
+      createdAt: new Date().toISOString()
+    });
+
+    return c.json({ success: true, event });
+  } catch (error) {
+    console.error('Approve event error:', error);
+    return c.json({ error: 'Failed to update event approval' }, 500);
+  }
+});
+
+// Mark event completion (KSH)
+app.post("/make-server-32aa5c5c/events/:id/complete", async (c) => {
+  try {
+    const id = c.req.param('id');
+    const authHeader = c.req.header('Authorization');
+
+    const { error, user } = await getUserFromAuth(authHeader);
+    if (error || !user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const event = await kv.get(`event:${id}`);
+    if (!event) {
+      return c.json({ error: 'Event not found' }, 404);
+    }
+
+    if (event.createdBy !== user.id) {
+      return c.json({ error: 'Hanya KSH pembuat event yang dapat menandai selesai' }, 403);
+    }
+
+    event.status = 'completed';
+    event.completedAt = new Date().toISOString();
+    event.updatedAt = new Date().toISOString();
+
+    await kv.set(`event:${id}`, event);
+
+    return c.json({ success: true, event });
+  } catch (error) {
+    console.error('Complete event error:', error);
+    return c.json({ error: 'Failed to mark event complete' }, 500);
+  }
+});
+
+// Submit recommendation (ASN tier 1)
+app.post("/make-server-32aa5c5c/recommendations", async (c) => {
+  try {
+    const authHeader = c.req.header('Authorization');
+    const { error, user } = await getUserFromAuth(authHeader);
+    if (error || !user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    if (!(user.role === 'admin' || isModeratorTier(user, 1))) {
+      return c.json({ error: 'Hanya ASN pendamping yang dapat menulis rekomendasi' }, 403);
+    }
+
+    const body = await c.req.json();
+    const { title, summary, suggestedActions, kampungId } = body;
+
+    if (!title) {
+      return c.json({ error: 'Judul rekomendasi wajib diisi' }, 400);
+    }
+
+    const recId = `rekom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const recommendation = {
+      id: recId,
+      title,
+      summary: summary || '',
+      suggestedActions: suggestedActions || '',
+      kampungId: kampungId || user.kampungId || null,
+      kecamatan: user.kecamatan || '',
+      kelurahan: user.kelurahan || '',
+      createdBy: user.id,
+      createdByName: user.name || '',
+      createdAt: new Date().toISOString()
+    };
+
+    await kv.set(`rekomendasi:${recId}`, recommendation);
+
+    return c.json({ success: true, recommendation });
+  } catch (error) {
+    console.error('Create recommendation error:', error);
+    return c.json({ error: 'Failed to create recommendation' }, 500);
+  }
+});
+
+// Get recommendations
+app.get("/make-server-32aa5c5c/recommendations", async (c) => {
+  try {
+    const kampungId = c.req.query('kampungId');
+    const createdBy = c.req.query('createdBy');
+
+    let recommendations = await kv.getByPrefix('rekomendasi:');
+
+    if (kampungId) {
+      recommendations = recommendations.filter((r: any) => r.kampungId === kampungId);
+    }
+
+    if (createdBy) {
+      recommendations = recommendations.filter((r: any) => r.createdBy === createdBy);
+    }
+
+    recommendations.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return c.json({ recommendations });
+  } catch (error) {
+    console.error('Get recommendations error:', error);
+    return c.json({ error: 'Failed to fetch recommendations' }, 500);
+  }
+});
+
 // Join event (RSVP)
 app.post("/make-server-32aa5c5c/events/:id/join", async (c) => {
   try {
     const id = c.req.param('id');
     const authHeader = c.req.header('Authorization');
-    const { error, userId } = await verifyUser(authHeader);
+    const { error, user } = await getUserFromAuth(authHeader);
 
-    if (error) {
-      return c.json({ error }, 401);
+    if (error || !user) {
+      return c.json({ error: error || 'Unauthorized' }, 401);
     }
 
     const event = await kv.get(`event:${id}`);
@@ -399,14 +684,31 @@ app.post("/make-server-32aa5c5c/events/:id/join", async (c) => {
       return c.json({ error: 'Event not found' }, 404);
     }
 
+    if (event.status !== 'published') {
+      return c.json({ error: 'Event belum dipublish' }, 400);
+    }
+
+    if (user.isKsh) {
+      return c.json({ error: 'KSH tidak bisa mendaftar event' }, 403);
+    }
+
+    if (user.hasPendingReport || (user.pendingReportEventIds && user.pendingReportEventIds.length > 0)) {
+      return c.json({ error: 'Selesaikan laporan kegiatan sebelumnya dulu' }, 400);
+    }
+
     // Check if already joined
-    if (event.participants && event.participants.includes(userId)) {
+    if (event.participants && event.participants.includes(user.id)) {
       return c.json({ error: 'Already joined this event' }, 400);
+    }
+
+    const quota = event.quota || 0;
+    if (quota > 0 && event.participants?.length >= quota) {
+      return c.json({ error: 'Kuota event sudah penuh' }, 400);
     }
 
     // Add user to participants
     event.participants = event.participants || [];
-    event.participants.push(userId);
+    event.participants.push(user.id);
     event.updatedAt = new Date().toISOString();
 
     await kv.set(`event:${id}`, event);
@@ -424,25 +726,42 @@ app.post("/make-server-32aa5c5c/events/:id/join", async (c) => {
 app.post("/make-server-32aa5c5c/reports", async (c) => {
   try {
     const authHeader = c.req.header('Authorization');
-    const { error, userId } = await verifyUser(authHeader);
+    const { error, user } = await getUserFromAuth(authHeader);
 
-    if (error) {
-      return c.json({ error }, 401);
+    if (error || !user) {
+      return c.json({ error: error || 'Unauthorized' }, 401);
     }
 
     const body = await c.req.json();
     const { eventId, photoUrl, participants, outcomeTags, location, isOfflineSubmission } = body;
 
+    if (!eventId) {
+      return c.json({ error: 'Event wajib dipilih' }, 400);
+    }
+
     if (!photoUrl) {
       return c.json({ error: 'Photo is required' }, 400);
+    }
+
+    const event = await kv.get(`event:${eventId}`);
+    if (!event) {
+      return c.json({ error: 'Event tidak ditemukan' }, 404);
+    }
+
+    if (!Array.isArray(event.participants) || !event.participants.includes(user.id)) {
+      return c.json({ error: 'Anda belum terdaftar di event ini' }, 403);
+    }
+
+    if (event.status !== 'completed') {
+      return c.json({ error: 'Laporan hanya bisa dibuat setelah event selesai' }, 400);
     }
 
     const reportId = `report-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
     const report = {
       id: reportId,
-      userId,
-      eventId: eventId || '',
+      userId: user.id,
+      eventId,
       photoUrl,
       participants: participants || 0,
       outcomeTags: outcomeTags || [],
@@ -458,11 +777,13 @@ app.post("/make-server-32aa5c5c/reports", async (c) => {
 
     await kv.set(`report:${reportId}`, report);
 
-    // Set auto-verify timer (3 days)
-    await kv.set(`report:autoVerify:${reportId}`, {
-      reportId,
-      scheduledFor: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
-    });
+    const pendingEvents = (user.pendingReportEventIds || []).filter(
+      (pendingId: string) => pendingId !== eventId
+    );
+    user.pendingReportEventIds = pendingEvents;
+    user.hasPendingReport = pendingEvents.length > 0;
+    user.updatedAt = new Date().toISOString();
+    await kv.set(`user:${user.id}`, user);
 
     return c.json({ success: true, report });
   } catch (error) {
@@ -510,13 +831,13 @@ app.post("/make-server-32aa5c5c/reports/:id/verify", async (c) => {
     const body = await c.req.json();
     const { approved, points } = body;
 
-    // Check admin auth
-    const isAdmin = authHeader?.startsWith('Bearer admin-');
-    if (!isAdmin) {
-      const { error } = await verifyUser(authHeader);
-      if (error) {
-        return c.json({ error: 'Unauthorized' }, 401);
-      }
+    const { error, user } = await getUserFromAuth(authHeader);
+    if (error || !user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    if (!(user.role === 'admin' || isModeratorTier(user, 2))) {
+      return c.json({ error: 'Hanya moderator tier 2 yang dapat verifikasi laporan' }, 403);
     }
 
     const report = await kv.get(`report:${id}`);
@@ -534,32 +855,32 @@ app.post("/make-server-32aa5c5c/reports/:id/verify", async (c) => {
     await kv.set(`report:${id}`, report);
 
     // If approved, add points to user
-    if (approved && report.userId) {
-      const user = await kv.get(`user:${report.userId}`);
-      if (user) {
-        user.points = (user.points || 0) + report.points;
-        
-        // Update level based on points
-        user.level = calculateLevel(user.points);
-        user.levelName = getLevelName(user.level);
-        
-        await kv.set(`user:${report.userId}`, user);
+    if (report.userId) {
+      const reportUser = await kv.get(`user:${report.userId}`);
+      if (reportUser) {
+        reportUser.pendingReportEventIds = (reportUser.pendingReportEventIds || []).filter(
+          (eventId: string) => eventId !== report.eventId
+        );
+        reportUser.hasPendingReport = reportUser.pendingReportEventIds.length > 0;
+        if (approved) {
+          reportUser.points = (reportUser.points || 0) + report.points;
+          reportUser.level = calculateLevel(reportUser.points);
+          reportUser.levelName = getLevelName(reportUser.level);
 
-        // Create points ledger entry
-        const ledgerId = `ledger-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        await kv.set(`ledger:${ledgerId}`, {
-          id: ledgerId,
-          userId: report.userId,
-          amount: report.points,
-          source: `report:${id}`,
-          type: 'report_verified',
-          timestamp: new Date().toISOString()
-        });
+          const ledgerId = `ledger-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          await kv.set(`ledger:${ledgerId}`, {
+            id: ledgerId,
+            userId: report.userId,
+            amount: report.points,
+            source: `report:${id}`,
+            type: 'report_verified',
+            timestamp: new Date().toISOString()
+          });
+        }
+        reportUser.updatedAt = new Date().toISOString();
+        await kv.set(`user:${report.userId}`, reportUser);
       }
     }
-
-    // Remove auto-verify timer
-    await kv.del(`report:autoVerify:${id}`);
 
     return c.json({ success: true, report });
   } catch (error) {

@@ -11,15 +11,13 @@ import {
   FileText, 
   Settings, 
   LogOut, 
-  Eye,
   TrendingUp,
   Award,
   BarChart3,
   CheckCircle,
   XCircle,
   Clock,
-  Crown,
-  Zap
+  Crown
 } from 'lucide-react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { toast } from 'sonner';
@@ -170,7 +168,7 @@ export function AdminDashboard({ user, authToken, onLogout, onNavigate, currentV
   const totalPoints = users.reduce((sum, u) => sum + (u.points || 0), 0);
   const pendingReports = reports.filter(r => r.status === 'pending');
   const verifiedReports = reports.filter(r => r.status === 'verified');
-  const upcomingEvents = events.filter(e => e.status === 'upcoming');
+  const upcomingEvents = events.filter(e => e.status === 'published');
 
   return (
     <div className="size-full flex flex-col bg-black text-white dark">

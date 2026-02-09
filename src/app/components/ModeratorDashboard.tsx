@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
-import { CheckCircle, XCircle, FileText, Clock, LayoutGrid, ShieldCheck, Lightbulb, BarChart3 } from 'lucide-react';
+import { CheckCircle, XCircle, FileText, Clock, LayoutGrid, ShieldCheck, Lightbulb, BarChart3, Users } from 'lucide-react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { toast } from 'sonner';
 import { FloatingNavbar } from '@/app/components/ui/FloatingNavbar';
+import { Input } from '@/app/components/ui/input';
 
 interface ModeratorDashboardProps {
   user: any;
@@ -20,12 +21,16 @@ interface ModeratorDashboardProps {
 export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, currentView, onViewChange, moderatorTier }: ModeratorDashboardProps) {
   const [reports, setReports] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [rekomForm, setRekomForm] = useState({ title: '', summary: '', suggestedActions: '' });
+  const [submittingRekom, setSubmittingRekom] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activePage, setActivePage] = useState<string>('overview');
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [moderatorTier]);
 
   useEffect(() => {
     const next = moderatorTier === 1 ? "monitor" : moderatorTier === 2 ? "verify" : "aggregate";
@@ -35,7 +40,7 @@ export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, curr
   const fetchData = async () => {
     setLoading(true);
     try {
-      await Promise.all([fetchReports(), fetchUsers()]);
+      await Promise.all([fetchReports(), fetchUsers(), fetchEvents(), fetchRecommendations()]);
     } finally {
       setLoading(false);
     }
@@ -63,8 +68,9 @@ export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, curr
 
   const fetchUsers = async () => {
     try {
+      const filter = moderatorTier === 1 ? `?kampungId=${user?.kampungId || ''}` : moderatorTier === 2 ? `?role=user` : '';
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/users`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/users${filter}`,
         {
           headers: {
             'Authorization': `Bearer ${authToken || publicAnonKey}`
@@ -78,6 +84,46 @@ export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, curr
       }
     } catch (error) {
       console.error('Error fetching users:', error);
+    }
+  };
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/events`,
+        {
+          headers: {
+            'Authorization': `Bearer ${authToken || publicAnonKey}`
+          }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setEvents(data.events || []);
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    }
+  };
+
+  const fetchRecommendations = async () => {
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/recommendations`,
+        {
+          headers: {
+            'Authorization': `Bearer ${authToken || publicAnonKey}`
+          }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setRecommendations(data.recommendations || []);
+      }
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
     }
   };
 
@@ -110,8 +156,73 @@ export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, curr
     }
   };
 
+  const handleEventApproval = async (eventId: string, approved: boolean) => {
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/events/${eventId}/approval`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken || publicAnonKey}`
+          },
+          body: JSON.stringify({ approved })
+        }
+      );
+
+      if (response.ok) {
+        toast.success(approved ? 'Event disetujui' : 'Event ditolak');
+        fetchEvents();
+      } else {
+        toast.error('Gagal memproses approval');
+      }
+    } catch (error) {
+      console.error('Error approving event:', error);
+      toast.error('Terjadi kesalahan');
+    }
+  };
+
+  const handleSubmitRecommendation = async () => {
+    if (!rekomForm.title.trim()) {
+      toast.error('Judul rekomendasi wajib diisi');
+      return;
+    }
+    setSubmittingRekom(true);
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-32aa5c5c/recommendations`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken || publicAnonKey}`
+          },
+          body: JSON.stringify(rekomForm)
+        }
+      );
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Gagal menyimpan rekomendasi');
+      }
+      toast.success('Rekomendasi tersimpan');
+      setRekomForm({ title: '', summary: '', suggestedActions: '' });
+      fetchRecommendations();
+    } catch (error: any) {
+      toast.error(error.message || 'Terjadi kesalahan');
+    } finally {
+      setSubmittingRekom(false);
+    }
+  };
+
   const pendingReports = reports.filter(r => r.status === 'pending');
   const verifiedReports = reports.filter(r => r.status === 'verified');
+  const draftEvents = events.filter((e) => e.status === 'draft');
+  const visibleUsers = moderatorTier === 1
+    ? users.filter((u) => u.kampungId && u.kampungId === user?.kampungId)
+    : moderatorTier === 2
+      ? users.filter((u) => u.kecamatan === user?.kecamatan)
+      : users;
 
   return (
     <div className="size-full flex flex-col bg-white">
@@ -189,6 +300,39 @@ export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, curr
             </CardContent>
           </Card>
         </div>
+
+        <Card className="border-cyan-100">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="w-5 h-5 text-cyan-600" />
+              Relawan Terpantau
+            </CardTitle>
+            <CardDescription>
+              {moderatorTier === 1
+                ? 'Kampung binaan'
+                : moderatorTier === 2
+                  ? 'Wilayah kecamatan'
+                  : 'Seluruh kota'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {visibleUsers.length === 0 ? (
+              <div className="text-sm text-gray-500">Belum ada data relawan.</div>
+            ) : (
+              <div className="space-y-2">
+                {visibleUsers.slice(0, 8).map((u) => (
+                  <div key={u.id} className="flex items-center justify-between p-3 rounded-lg bg-cyan-50">
+                    <div>
+                      <div className="font-semibold text-sm">{u.name}</div>
+                      <div className="text-xs text-gray-500">{u.kelurahan} • {u.kecamatan}</div>
+                    </div>
+                    <Badge className="bg-cyan-600 text-white">{u.points || 0} XP</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {activePage === "verify" && (
           <Card>
@@ -327,7 +471,54 @@ export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, curr
               <CardDescription>Catatan rekomendasi berbasis data.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-sm text-gray-500">Belum ada rekomendasi terbaru.</div>
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Judul</label>
+                    <Input
+                      value={rekomForm.title}
+                      onChange={(e) => setRekomForm(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Contoh: Optimalisasi pilar ekonomi RW 05"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Ringkasan</label>
+                    <Input
+                      value={rekomForm.summary}
+                      onChange={(e) => setRekomForm(prev => ({ ...prev, summary: e.target.value }))}
+                      placeholder="Ringkasan rekomendasi..."
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Usulan Tindak Lanjut</label>
+                    <Input
+                      value={rekomForm.suggestedActions}
+                      onChange={(e) => setRekomForm(prev => ({ ...prev, suggestedActions: e.target.value }))}
+                      placeholder="Langkah singkat yang disarankan"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleSubmitRecommendation}
+                    disabled={submittingRekom}
+                    className="bg-cyan-600 text-white hover:bg-cyan-700"
+                  >
+                    {submittingRekom ? 'Menyimpan...' : 'Simpan Rekomendasi'}
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  {recommendations.length === 0 ? (
+                    <div className="text-sm text-gray-500">Belum ada rekomendasi terbaru.</div>
+                  ) : (
+                    recommendations.slice(0, 5).map((rec) => (
+                      <div key={rec.id} className="p-3 rounded-lg bg-cyan-50">
+                        <div className="font-semibold text-sm">{rec.title}</div>
+                        <div className="text-xs text-gray-600">{rec.summary || 'Belum ada ringkasan.'}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -342,7 +533,41 @@ export function ModeratorDashboard({ user, authToken, onLogout, onNavigate, curr
               <CardDescription>Tier 2 memverifikasi kegiatan.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-sm text-gray-500">Data kegiatan menunggu approval akan muncul di sini.</div>
+              {draftEvents.length === 0 ? (
+                <div className="text-sm text-gray-500">Tidak ada kegiatan menunggu approval.</div>
+              ) : (
+                <div className="space-y-3">
+                  {draftEvents.map((event) => (
+                    <div key={event.id} className="p-3 border rounded-lg bg-white">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="font-semibold">{event.title}</div>
+                          <div className="text-xs text-gray-500">{event.kelurahan} • {event.kecamatan}</div>
+                          <div className="text-xs text-gray-500">{event.date}</div>
+                        </div>
+                        <Badge className="bg-yellow-400 text-black">Draft</Badge>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <Button
+                          onClick={() => handleEventApproval(event.id, true)}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Approve
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => handleEventApproval(event.id, false)}
+                          className="flex-1"
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
